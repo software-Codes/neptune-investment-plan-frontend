@@ -1,11 +1,10 @@
+import LogIn from '@/components/auth/log-in'
 import React from 'react'
 
 const LoginPage = () => {
   return (
-    <div>
-      <p>
-        loginpage
-      </p>
+    <div className='' >
+        <LogIn />
     </div>
   )
 }
