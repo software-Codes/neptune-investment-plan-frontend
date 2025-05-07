@@ -17,7 +17,7 @@ export async function middleware(request: NextRequest) {
   if (publicRoutes.includes(pathname)) {
     // If user is already authenticated, redirect to dashboard
     if (token) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.redirect(new URL("/pages/user/dashboard", request.url));
     }
     return NextResponse.next();
   }

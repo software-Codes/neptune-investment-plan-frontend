@@ -1,8 +1,8 @@
 export interface User {
   id: string;
   email: string;
-  fullName: string;
-  // Add other user properties
+  name: string;
+  role?: string;
 }
 
 export interface AuthContextType {
