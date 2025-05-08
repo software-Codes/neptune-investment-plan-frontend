@@ -4,6 +4,8 @@ import "./globals.css";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { AuthProvider } from "@/context/AuthProvider";
+import MouseMoveEffect from "@/components/mouse-move-effect";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
@@ -26,7 +28,20 @@ export default function RootLayout({
           disableTransitionOnChange>
           <AuthProvider>
             {children}
+            <Toaster 
+          theme="light" 
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: 'white',
+              border: '1px solid #10B981',
+              color: '#065F46',
+            },
+          }}
+        />
+            
           </AuthProvider>
+          <MouseMoveEffect />
 
         </ThemeProvider>
       </body>
