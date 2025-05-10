@@ -1,3 +1,4 @@
+// src/lib/api-client.ts
 import axios, { AxiosError } from "axios";
 import { RegistrationData, RegistrationResponse } from "@/types/type";
 
@@ -5,7 +6,8 @@ import { RegistrationData, RegistrationResponse } from "@/types/type";
  * Base URL for API requests
  * Falls back to localhost:4000 if NEXT_PUBLIC_API_URL is not set
  */
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 /**
  * Axios instance with default configuration
@@ -13,7 +15,7 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost
  */
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 5000,
+  timeout: 10000, // Increased timeout for slower connections
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -26,7 +28,8 @@ const axiosInstance = axios.create({
  * Adds authentication token to requests if available
  */
 axiosInstance.interceptors.request.use((config) => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -45,14 +48,33 @@ axiosInstance.interceptors.response.use(
     }
 
     if (error.code === "ECONNABORTED") {
-      throw new Error("Request timeout. Please try again.");
+      throw new Error("Request timeout. Please try again later.");
     }
 
-    const errorMessage = (error.response?.data as any)?.message || error.message;
+    // Handle server unreachable errors
+    if (!error.response) {
+      throw new Error("Unable to reach server. Please try again later.");
+    }
+
+    // Extract detailed error information
+    const errorResponse = error.response?.data as any;
+    const errorMessage =
+      errorResponse?.message || error.message || "An unknown error occurred";
+
+    // Create a custom error with extended properties
     const customError = new Error(errorMessage);
     Object.assign(customError, {
-      requiresVerification: (error.response?.data as any)?.requiresVerification,
-      userId: (error.response?.data as any)?.userId,
+      requiresVerification: errorResponse?.requiresVerification || false,
+      userId: errorResponse?.userId,
+      statusCode: error.response?.status,
+      isNetworkError: !error.response,
+      isServerError: error.response?.status
+        ? error.response.status >= 500
+        : false,
+      isClientError: error.response?.status
+        ? error.response.status >= 400 && error.response.status < 500
+        : false,
+      errorDetails: errorResponse,
     });
 
     throw customError;
@@ -72,14 +94,11 @@ export const authApi = {
    */
   login: async (email: string, password: string) => {
     try {
-      const response = await axiosInstance.post<{
-        success: boolean;
-        token: string;
-        session: {
-          sessionId: string;
-          expiresAt: string;
-        };
-      }>("/api/v1/auth/login", { email, password });
+      console.log("Login attempt:", { email, apiUrl: API_BASE_URL });
+      const response = await axiosInstance.post("/api/v1/auth/login", {
+        email,
+        password,
+      });
       return response;
     } catch (error) {
       console.error("Login request failed:", error);
@@ -93,12 +112,7 @@ export const authApi = {
    */
   verify: async () => {
     try {
-      const response = await axiosInstance.get<{
-        userId: string;
-        email: string;
-        fullName: string;
-        accountStatus: string;
-      }>("/api/v1/auth/verify");
+      const response = await axiosInstance.get("/api/v1/auth/verify");
       return response;
     } catch (error) {
       console.error("Verification request failed:", error);
@@ -112,9 +126,7 @@ export const authApi = {
    */
   logout: async () => {
     try {
-      const response = await axiosInstance.post<{ success: boolean }>(
-        "/api/v1/auth/logout"
-      );
+      const response = await axiosInstance.post("/api/v1/auth/logout");
       return response;
     } catch (error) {
       console.error("Logout request failed:", error);
@@ -129,13 +141,55 @@ export const authApi = {
    */
   register: async (userData: RegistrationData) => {
     try {
-      const response = await axiosInstance.post<RegistrationResponse>(
+      console.log("Registration attempt:", {
+        email: userData.email,
+        apiUrl: API_BASE_URL,
+      });
+      const response = await axiosInstance.post(
         "/api/v1/auth/register",
         userData
       );
       return response;
     } catch (error) {
       console.error("Registration request failed:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Resends OTP verification code
+   * @param {string} userId - User ID
+   * @param {string} method - Delivery method (email or phone)
+   * @returns {Promise} Resend confirmation
+   */
+  resendOTP: async (userId: string, method: "email" | "phone") => {
+    try {
+      const response = await axiosInstance.post("/api/v1/auth/resend-otp", {
+        userId,
+        deliveryMethod: method,
+      });
+      return response;
+    } catch (error) {
+      console.error("Resend OTP request failed:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Verifies OTP code
+   * @param {string} userId - User ID
+   * @param {string} otpCode - OTP code
+   * @returns {Promise} Verification result
+   */
+  verifyOTP: async (userId: string, otpCode: string) => {
+    try {
+      const response = await axiosInstance.post("/api/v1/auth/verify-otp", {
+        userId,
+        otpCode,
+      });
+      return response;
+    } catch (error) {
+      console.error("OTP verification request failed:", error);
       throw error;
     }
   },

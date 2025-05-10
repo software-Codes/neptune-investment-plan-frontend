@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/context/AuthProvider.tsx
 "use client"
 
@@ -30,6 +28,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [verificationRedirectData, setVerificationRedirectData] = useState<{ userId?: string; email?: string } | null>(null);
     const router = useRouter();
 
     /**
@@ -41,11 +40,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsLoading(true);
         try {
             const response = await authApi.register(data);
-            toast.success(response.data.message); // Note the .data accessor
-            router.push('/pages/auth/otp-verify');
+            
+            // Store user ID for verification page if needed
+            if (response.data.user && response.data.user.userId) {
+                setVerificationRedirectData({
+                    userId: response.data.user.userId,
+                    email: response.data.user.email
+                });
+                
+                // Show success message with more details
+                toast.success(
+                    response.data.message || 
+                    `Verification code sent via ${data.preferredContactMethod}. Please verify your account.`
+                );
+                
+                // Redirect to verification page
+                router.push('/pages/auth/otp-verify');
+            } else {
+                toast.success('Registration successful. Please check your email or phone for verification.');
+                router.push('/pages/auth/otp-verify');
+            }
         } catch (error: any) {
             console.error('Registration error:', error);
-            toast.error(error.message || 'Registration failed');
+            
+            // Improved error messaging
+            const errorMessage = getReadableErrorMessage(error);
+            toast.error(errorMessage);
             throw error;
         } finally {
             setIsLoading(false);
@@ -64,12 +84,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
 
             const response = await authApi.verify();
-            const userData = response.data; // Access the data property of AxiosResponse
+            const userData = response;
+            
+            if (!userData.data.userId) {
+                handleLogout();
+                return false;
+            }
+            
             setUser({
-                id: userData.userId,
-                email: userData.email,
-                name: userData.fullName,
-                role: userData.accountStatus === 'active' ? 'user' : 'pending',
+                id: userData.data.userId,
+                email: userData.data.email,
+                name: userData.data.fullName,
+                role: userData.data.accountStatus === 'active' ? 'user' : 'pending',
             });
 
             return true;
@@ -99,27 +125,42 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsLoading(true);
         try {
             const response = await authApi.login(email, password);
-            const { token } = response.data;  // Access the data property of AxiosResponse
+            const { token } = response.data;
 
             if (!token) {
                 throw new Error('Invalid response from server');
             }
 
             localStorage.setItem('token', token);
-            await checkAuth();
-            toast.success('Successfully logged in');
+            const authSuccess = await checkAuth();
+            
+            if (authSuccess) {
+                toast.success('Successfully logged in');
+                return;
+            } else {
+                throw new Error('Failed to retrieve user details');
+            }
         } catch (error: any) {
             console.error('Login error:', error);
 
             if (error.requiresVerification) {
-                toast.error('Please verify your account before logging in');
-            } else if (error.message.includes('Unable to reach server')) {
-                toast.error('Cannot connect to server. Please check your internet connection.');
-            } else {
-                toast.error(error.message || 'Login failed');
+                toast.error('Account not verified. Please verify your account first.');
+                
+                // Store user ID for verification if available
+                if (error.userId) {
+                    setVerificationRedirectData({
+                        userId: error.userId,
+                        email
+                    });
+                    
+                    // Redirect to verification page
+                    router.push('/pages/auth/otp-verify');
+                    return;
+                }
             }
             
-
+            const errorMessage = getReadableErrorMessage(error);
+            toast.error(errorMessage);
             throw error;
         } finally {
             setIsLoading(false);
@@ -136,12 +177,45 @@ export function AuthProvider({ children }: AuthProviderProps) {
             toast.success('Successfully logged out');
         } catch (error) {
             console.error('Logout error:', error);
-            toast.error('An error occurred during logout');
+            // Even if server logout fails, clear local state
+            toast.error('An error occurred during logout, but you have been logged out locally');
         } finally {
             handleLogout();
             router.push('/login');
             setIsLoading(false);
         }
+    };
+    
+    /**
+     * Formats error messages to be more user-friendly
+     * @param {any} error - The error object
+     * @returns {string} A readable error message
+     */
+    const getReadableErrorMessage = (error: any): string => {
+        // Check for specific error messages and transform them
+        const message = error.message || 'An unknown error occurred';
+        
+        if (message.includes('already exists')) {
+            return message;
+        }
+        
+        if (message.includes('no internet') || message.includes('connect')) {
+            return 'Unable to connect to the server. Please check your internet connection.';
+        }
+        
+        if (message.includes('timeout')) {
+            return 'Server is taking too long to respond. Please try again later.';
+        }
+        
+        if (message.includes('Invalid email or password')) {
+            return 'The email or password you entered is incorrect. Please try again.';
+        }
+        
+        if (message.includes('not verified')) {
+            return 'Your account needs verification. Please check your email or phone for the verification code.';
+        }
+        
+        return message;
     };
 
     // Initialize authentication state
@@ -167,7 +241,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         login,
         logout,
         checkAuth,
-        register
+        register,
+        verificationData: verificationRedirectData
     };
 
     if (!isInitialized) {
