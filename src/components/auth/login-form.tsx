@@ -51,6 +51,12 @@ export function   LoginForm({ className, onSubmit, ...props }: LoginFormProps) {
     setIsLoading(true)
     setError(null)
     
+    // Add debugging
+    console.log('Login attempt:', {
+      email: data.email,
+      apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+    });
+    
     try {
       if (onSubmit) {
         await onSubmit(data)
@@ -58,6 +64,7 @@ export function   LoginForm({ className, onSubmit, ...props }: LoginFormProps) {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Something went wrong"
       setError(message)
+      console.error('Login error details:', error);
     } finally {
       setIsLoading(false)
     }
@@ -152,7 +159,7 @@ export function   LoginForm({ className, onSubmit, ...props }: LoginFormProps) {
       <div className="text-center text-sm text-emerald-600/80">
         Don&apos;t have an account?{" "}
         <a
-          href="/auth/register"
+          href="/pages/auth/register"
           className="text-emerald-600 font-medium hover:text-emerald-700 underline underline-offset-4"
         >
           Sign up

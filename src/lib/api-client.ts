@@ -1,131 +1,144 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { toast } from "sonner";
+import axios, { AxiosError } from "axios";
+import { RegistrationData, RegistrationResponse } from "@/types/type";
 
-interface ApiErrorResponse {
-  message: string;
-  requiresVerification?: boolean;
-  userId?: string;
-}
+/**
+ * Base URL for API requests
+ * Falls back to localhost:4000 if NEXT_PUBLIC_API_URL is not set
+ */
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+/**
+ * Axios instance with default configuration
+ * Includes authorization token handling and error interceptors
+ */
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 5000,
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+});
 
-export async function apiClient<T>(
-  endpoint: string, 
-  options: RequestInit = {}
-): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
-  
-  // Default headers
-  const defaultHeaders = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
-
-  // Get token if available
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  
-  // Merge headers
-  const headers = {
-    ...defaultHeaders,
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options.headers,
-  };
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers,
-      credentials: 'include', // Include cookies if needed
-    });
-
-    // Handle non-OK responses
-    if (!response.ok) {
-      let errorData: ApiErrorResponse;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = {
-          message: `HTTP error! status: ${response.status}`,
-        };
-      }
-
-      const error = new Error(errorData.message || 'An error occurred');
-      Object.assign(error, errorData);
-      throw error;
-    }
-
-    return await response.json();
-  } catch (error) {
-    // Network or parsing errors
-    if (!window.navigator.onLine) {
-      throw new Error('No internet connection. Please check your network.');
-    }
-
-    if (error instanceof TypeError && error.message === 'Failed to fetch') {
-      console.error(`API endpoint not reachable: ${url}`);
-      throw new Error(`Unable to reach server at ${API_BASE_URL}. Please check the API URL and try again.`);
-    }
-
-    // Re-throw the error with additional context
-    console.error('API request failed:', {
-      url,
-      error,
-      headers: Object.fromEntries(
-        Object.entries(headers).map(([k, v]) => [k, k === 'Authorization' ? '[REDACTED]' : v])
-      ),
-    });
-
-    throw error;
+/**
+ * Request interceptor
+ * Adds authentication token to requests if available
+ */
+axiosInstance.interceptors.request.use((config) => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-}
+  return config;
+});
 
-// Auth API endpoints
+/**
+ * Response interceptor
+ * Handles common error cases and transforms error responses
+ */
+axiosInstance.interceptors.response.use(
+  (response) => response.data,
+  (error: AxiosError) => {
+    if (!window.navigator.onLine) {
+      throw new Error("No internet connection. Please check your network.");
+    }
+
+    if (error.code === "ECONNABORTED") {
+      throw new Error("Request timeout. Please try again.");
+    }
+
+    const errorMessage = (error.response?.data as any)?.message || error.message;
+    const customError = new Error(errorMessage);
+    Object.assign(customError, {
+      requiresVerification: (error.response?.data as any)?.requiresVerification,
+      userId: (error.response?.data as any)?.userId,
+    });
+
+    throw customError;
+  }
+);
+
+/**
+ * Authentication API methods
+ * Handles all authentication-related API calls
+ */
 export const authApi = {
+  /**
+   * Authenticates user with email and password
+   * @param {string} email - User's email
+   * @param {string} password - User's password
+   * @returns {Promise} Authentication response with token and session data
+   */
   login: async (email: string, password: string) => {
     try {
-      const response = await apiClient<{
-        success: true;
+      const response = await axiosInstance.post<{
+        success: boolean;
         token: string;
         session: {
           sessionId: string;
           expiresAt: string;
         };
-      }>('/api/v1/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
-
+      }>("/api/v1/auth/login", { email, password });
       return response;
     } catch (error) {
-      console.error('Login request failed:', error);
+      console.error("Login request failed:", error);
       throw error;
     }
   },
 
+  /**
+   * Verifies current authentication status
+   * @returns {Promise} User data if verified
+   */
   verify: async () => {
     try {
-      return await apiClient<{
+      const response = await axiosInstance.get<{
         userId: string;
         email: string;
         fullName: string;
         accountStatus: string;
-      }>('/api/v1/auth/verify', {
-        method: 'GET',
-      });
+      }>("/api/v1/auth/verify");
+      return response;
     } catch (error) {
-      console.error('Verification request failed:', error);
+      console.error("Verification request failed:", error);
       throw error;
     }
   },
 
+  /**
+   * Logs out the current user
+   * @returns {Promise} Logout confirmation
+   */
   logout: async () => {
     try {
-      return await apiClient<{ success: true }>('/api/v1/auth/logout', {
-        method: 'POST',
-      });
+      const response = await axiosInstance.post<{ success: boolean }>(
+        "/api/v1/auth/logout"
+      );
+      return response;
     } catch (error) {
-      console.error('Logout request failed:', error);
+      console.error("Logout request failed:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Registers a new user
+   * @param {RegistrationData} userData - User registration data
+   * @returns {Promise<RegistrationResponse>} Registration confirmation and user data
+   */
+  register: async (userData: RegistrationData) => {
+    try {
+      const response = await axiosInstance.post<RegistrationResponse>(
+        "/api/v1/auth/register",
+        userData
+      );
+      return response;
+    } catch (error) {
+      console.error("Registration request failed:", error);
       throw error;
     }
   },
 };
+
+export { axiosInstance as apiClient };

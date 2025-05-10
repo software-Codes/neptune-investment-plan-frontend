@@ -10,7 +10,7 @@ interface AuthLayoutProps {
 export default function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-emerald-50 to-teal-50">
-      {/* Header with Logo */}
+      {/* Header with Logo
       <header className="container mx-auto py-6">
         <div className="flex justify-center">
           <Link href="/" className="flex items-center gap-2">
@@ -20,7 +20,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             <span className="text-xl font-bold text-emerald-800">eptune</span>
           </Link>
         </div>
-      </header>
+      </header> */}
 
       {/* Main Content */}
       <main className="container mx-auto flex flex-1 flex-col items-center justify-center px-6 py-8">
