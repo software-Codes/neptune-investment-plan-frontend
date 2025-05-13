@@ -7,6 +7,7 @@ const publicRoutes = [
   "/pages/auth/login",
   "/pages/auth/register",
   "/pages/auth/forgot-password",
+  "/pages/auth/otp-verify",
 ];
 
 export async function middleware(request: NextRequest) {
@@ -14,13 +15,14 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow access to public routes without authentication
-  if (publicRoutes.includes(pathname)) {
+  if (publicRoutes.some(route => request.nextUrl.pathname.startsWith(route))) {
     // If user is already authenticated, redirect to dashboard
     if (token) {
       return NextResponse.redirect(new URL("/pages/user/dashboard", request.url));
     }
     return NextResponse.next();
   }
+
   // Check if user is authenticated for protected routes
   if (!token) {
     // Redirect to login page and store the original url as a query parameter
@@ -28,41 +30,21 @@ export async function middleware(request: NextRequest) {
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
-  try {
-    // Verify token on protected routes
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
 
-    if (!response.ok) {
-      throw new Error("Token verification failed");
-    }
-
-    return NextResponse.next();
-  } catch (error) {
-    // If token verification fails, clear the token and redirect to login
-    const response = NextResponse.redirect(new URL("/login", request.url));
-    response.cookies.delete("token");
-    return response;
-  }
-
+  // For authenticated users, allow access to all other pages
+  return NextResponse.next();
 }
 
 // Configure which routes should be handled by the middleware
 export const config = {
   matcher: [
     /*
-     * Match all routes except:
-     * 1. /api routes
-     * 2. /_next (Next.js internals)
-     * 3. /static (static files)
-     * 4. /_vercel (Vercel internals)
-     * 5. All files in the public folder
+     * Match all paths except:
+     * - /api routes
+     * - /_next (Next.js internals)
+     * - /_vercel (Vercel internals)
+     * - /static (static files)
+     * - All files in the public folder
      */
     '/((?!api|_next|_vercel|static|.*\\..*).*)',
   ],

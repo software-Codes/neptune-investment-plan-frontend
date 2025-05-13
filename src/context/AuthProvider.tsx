@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/context/AuthProvider.tsx
 "use client"
 
@@ -20,9 +22,6 @@ interface AuthProviderProps {
 /**
  * AuthProvider Component
  * Manages authentication state and provides authentication methods to child components
- * @component
- * @param {AuthProviderProps} props - Component props
- * @param {React.ReactNode} props.children - Child components
  */
 export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<User | null>(null);
@@ -33,8 +32,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     /**
      * Registers a new user
-     * @param {RegistrationData} data - User registration data
-     * @throws {Error} When registration fails
      */
     const register = async (data: RegistrationData): Promise<void> => {
         setIsLoading(true);
@@ -49,15 +46,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 });
                 
                 // Show success message with more details
-                toast.success(
-                    response.data.message || 
-                    `Verification code sent via ${data.preferredContactMethod}. Please verify your account.`
-                );
+                toast.success("Registration successful!", {
+                    description: `Verification code sent via ${data.preferredContactMethod}. Please verify your account.`,
+                    duration: 5000
+                });
                 
                 // Redirect to verification page
                 router.push('/pages/auth/otp-verify');
             } else {
-                toast.success('Registration successful. Please check your email or phone for verification.');
+                toast.success('Registration successful!', {
+                    description: 'Please check your email or phone for verification.',
+                    duration: 5000
+                });
                 router.push('/pages/auth/otp-verify');
             }
         } catch (error: any) {
@@ -65,7 +65,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
             
             // Improved error messaging
             const errorMessage = getReadableErrorMessage(error);
-            toast.error(errorMessage);
+            toast.error("Registration failed", {
+                description: errorMessage,
+                duration: 4000
+            });
             throw error;
         } finally {
             setIsLoading(false);
@@ -74,7 +77,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     /**
      * Verifies the current authentication status
-     * @returns {Promise<boolean>} True if authenticated, false otherwise
      */
     const checkAuth = async () => {
         try {
@@ -108,7 +110,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     /**
      * Handles the logout cleanup
-     * @private
      */
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -117,55 +118,54 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     /**
      * Authenticates a user with email and password
-     * @param {string} email - User's email
-     * @param {string} password - User's password
-     * @throws {Error} When login fails
      */
-    const login = async (email: string, password: string): Promise<void> => {
-        setIsLoading(true);
-        try {
-            const response = await authApi.login(email, password);
-            const { token } = response.data;
+ const login = async (email: string, password: string) => {
+  setIsLoading(true);
+  try {
+    const response = await authApi.login(email, password);
+    
+    // Check if the response contains a token
+    if (!response.data.token) {
+      throw new Error("Login successful but token not received. Please check your email or phone for verification instructions.");
+    }
 
-            if (!token) {
-                throw new Error('Invalid response from server');
-            }
+    localStorage.setItem('token', response.data.token);
+    
+    // Check if user is verified
+    if (!response.data.user.email_verified && !response.data.user.phone_verified) {
+      setVerificationRedirectData({
+        userId: response.data.user.userId,
+        email
+      });
+      router.push('/pages/auth/otp-verify');
+      return;
+    }
 
-            localStorage.setItem('token', token);
-            const authSuccess = await checkAuth();
-            
-            if (authSuccess) {
-                toast.success('Successfully logged in');
-                return;
-            } else {
-                throw new Error('Failed to retrieve user details');
-            }
-        } catch (error: any) {
-            console.error('Login error:', error);
-
-            if (error.requiresVerification) {
-                toast.error('Account not verified. Please verify your account first.');
-                
-                // Store user ID for verification if available
-                if (error.userId) {
-                    setVerificationRedirectData({
-                        userId: error.userId,
-                        email
-                    });
-                    
-                    // Redirect to verification page
-                    router.push('/pages/auth/otp-verify');
-                    return;
-                }
-            }
-            
-            const errorMessage = getReadableErrorMessage(error);
-            toast.error(errorMessage);
-            throw error;
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const authSuccess = await checkAuth();
+    if (authSuccess) {
+      toast.success('Successfully logged in');
+    } else {
+      throw new Error('Failed to retrieve user details');
+    }
+  } catch (error: any) {
+    console.error('Login error:', error);
+    
+    if (error.requiresVerification) {
+      setVerificationRedirectData({
+        userId: error.userId,
+        email
+      });
+      router.push('/pages/auth/otp-verify');
+      return;
+    }
+    
+    const errorMessage = getReadableErrorMessage(error);
+    toast.error(errorMessage);
+    throw error;
+  } finally {
+    setIsLoading(false);
+  }
+};
 
     /**
      * Logs out the current user
@@ -174,11 +174,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsLoading(true);
         try {
             await authApi.logout();
-            toast.success('Successfully logged out');
+            toast.success('Goodbye!', {
+                description: 'You have been successfully logged out.',
+                duration: 3000
+            });
         } catch (error) {
             console.error('Logout error:', error);
             // Even if server logout fails, clear local state
-            toast.error('An error occurred during logout, but you have been logged out locally');
+            toast.error("Logout error", {
+                description: 'An error occurred during logout, but you have been logged out locally.',
+                duration: 3000
+            });
         } finally {
             handleLogout();
             router.push('/login');
@@ -188,31 +194,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
     
     /**
      * Formats error messages to be more user-friendly
-     * @param {any} error - The error object
-     * @returns {string} A readable error message
      */
     const getReadableErrorMessage = (error: any): string => {
-        // Check for specific error messages and transform them
         const message = error.message || 'An unknown error occurred';
         
-        if (message.includes('already exists')) {
-            return message;
+        // Transform specific server messages
+        const errorMappings: Record<string, string> = {
+            'User already exists': 'An account with this email already exists. Please sign in instead.',
+            'invalid credentials': 'The email or password you entered is incorrect. Please try again.',
+            'Invalid email or password': 'The email or password you entered is incorrect. Please try again.',
+            'not verified': 'Your account needs verification. Please check your email or phone for the verification code.',
+            'Account is not verified': 'Your account needs verification. Please check your email or phone for the verification code.',
+            'User not found': 'No account found with this email address. Please check your email or sign up for a new account.'
+        };
+        
+        // Check for specific error patterns
+        for (const [pattern, userMessage] of Object.entries(errorMappings)) {
+            if (message.toLowerCase().includes(pattern.toLowerCase())) {
+                return userMessage;
+            }
         }
         
+        // Handle network and server errors
         if (message.includes('no internet') || message.includes('connect')) {
-            return 'Unable to connect to the server. Please check your internet connection.';
+            return 'Unable to connect to the server. Please check your internet connection and try again.';
         }
         
         if (message.includes('timeout')) {
-            return 'Server is taking too long to respond. Please try again later.';
+            return 'The server is taking too long to respond. Please try again in a moment.';
         }
         
-        if (message.includes('Invalid email or password')) {
-            return 'The email or password you entered is incorrect. Please try again.';
-        }
-        
-        if (message.includes('not verified')) {
-            return 'Your account needs verification. Please check your email or phone for the verification code.';
+        if (message.includes('500') || message.includes('server error')) {
+            return 'The server is experiencing issues. Please try again later.';
         }
         
         return message;
@@ -246,9 +259,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     if (!isInitialized) {
-        return <div className="flex h-screen w-screen items-center justify-center">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
-        </div>;
+        return (
+            <div className="flex h-screen w-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+                <div className="text-center space-y-4">
+                    <div className="relative">
+                        <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent mx-auto"></div>
+                        <div className="absolute inset-0 h-12 w-12 rounded-full bg-emerald-500/10 animate-pulse mx-auto"></div>
+                    </div>
+                    <p className="text-emerald-700 text-lg font-medium">Loading...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
