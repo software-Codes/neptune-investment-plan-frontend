@@ -212,7 +212,7 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
       )}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 w-">
           <FormField
             control={form.control}
             name="email"
@@ -273,16 +273,16 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
         </form>
       </Form>
 
-      <div className="relative py-6">
+      {/* <div className="relative py-6">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-emerald-200"></div>
         </div>
         <div className="relative flex justify-center">
           <span className="bg-white px-4 text-sm text-emerald-600/70">or</span>
         </div>
-      </div>
+      </div> */}
 
-      <div className="text-center text-sm text-emerald-600/80">
+      {/* <div className="text-center text-sm text-emerald-600/80">
         Don&apos;t have an account?{" "}
         <a
           href="/pages/auth/register"
@@ -290,9 +290,9 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
         >
           Sign up
         </a>
-      </div>
+      </div> */}
 
-      <div className="text-balance text-center text-xs text-emerald-600/60 leading-relaxed">
+      {/* <div className="text-balance text-center text-xs text-emerald-600/60 leading-relaxed">
         By clicking continue, you agree to our{" "}
         <a href="#" className="text-emerald-600 hover:text-emerald-700 underline underline-offset-4 transition-colors">
           Terms of Service
@@ -302,7 +302,7 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
           Privacy Policy
         </a>
         .
-      </div>
+      </div> */}
     </div>
   )
 }

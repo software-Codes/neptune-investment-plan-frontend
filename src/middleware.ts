@@ -8,31 +8,78 @@ const publicRoutes = [
   "/pages/auth/register",
   "/pages/auth/forgot-password",
   "/pages/auth/otp-verify",
+  "/support",
 ];
 
-export async function middleware(request: NextRequest) {
-  const token = request.cookies.get("token")?.value;
-  const { pathname } = request.nextUrl;
+// Define paths that should be protected (requiring authentication)
+const protectedRoutes = [
+  "/pages/user/dashboard",
+  "/pages/user/profile",
+  "/pages/user/settings",
+  // Add other protected routes here
+];
 
-  // Allow access to public routes without authentication
-  if (publicRoutes.some(route => request.nextUrl.pathname.startsWith(route))) {
-    // If user is already authenticated, redirect to dashboard
-    if (token) {
-      return NextResponse.redirect(new URL("/pages/user/dashboard", request.url));
-    }
+// Constants for routes
+const DASHBOARD_ROUTE = "/pages/user/dashboard";
+const LOGIN_ROUTE = "/pages/auth/login";
+const HOME_ROUTE = "/";
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  
+  // Get token from cookies (more secure than localStorage for auth)
+  const authCookie = request.cookies.get("auth-token");
+  const hasToken = !!authCookie?.value;
+  
+  // Allow access to static assets and API routes without authentication checks
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/static") ||
+    pathname.includes(".")
+  ) {
     return NextResponse.next();
   }
 
-  // Check if user is authenticated for protected routes
-  if (!token) {
-    // Redirect to login page and store the original url as a query parameter
-    const loginUrl = new URL("/pages/auth/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+  // Handle root path ("/")
+  if (pathname === "/") {
+    const bypass = request.nextUrl.searchParams.get('bypass');
+    if (bypass === 'true') {
+      return NextResponse.next();
+    }
+    
+    if (!hasToken) {
+      return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
+    }
+    return NextResponse.redirect(new URL(DASHBOARD_ROUTE, request.url));
   }
-
-  // For authenticated users, allow access to all other pages
-  return NextResponse.next();
+  // Handle public routes
+  if (publicRoutes.some(route => pathname === route || pathname.startsWith(route))) {
+    // If user is already authenticated and trying to access login/register pages,
+    // redirect them to dashboard
+    if (hasToken && (pathname.includes("/login") || pathname.includes("/register"))) {
+      return NextResponse.redirect(new URL(DASHBOARD_ROUTE, request.url));
+    }
+    
+    // Otherwise, allow access to public routes
+    return NextResponse.next();
+  }
+  
+  // Handle protected routes - require authentication
+  if (protectedRoutes.some(route => pathname === route || pathname.startsWith(route))) {
+    if (!hasToken) {
+      // Redirect to login page and store the original URL as a query parameter
+      const loginUrl = new URL(LOGIN_ROUTE, request.url);
+      loginUrl.searchParams.set("redirectTo", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    
+    // Token exists, allow access to protected route
+    return NextResponse.next();
+  }
+  
+  // For any unmatched routes, redirect to home
+  return NextResponse.redirect(new URL(HOME_ROUTE, request.url));
 }
 
 // Configure which routes should be handled by the middleware
@@ -46,6 +93,6 @@ export const config = {
      * - /static (static files)
      * - All files in the public folder
      */
-    '/((?!api|_next|_vercel|static|.*\\..*).*)',
+    "/((?!api|_next|_vercel|static|.*\\..*).*)",
   ],
 };

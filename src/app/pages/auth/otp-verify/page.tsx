@@ -3,7 +3,7 @@
 // pages/auth/verify-otp.tsx
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { authApi } from "@/lib/api-client"
@@ -33,59 +33,92 @@ export default function VerifyOTPPage() {
   const [error, setError] = useState<string | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
   const [preferredContactMethod, setPreferredContactMethod] = useState<'email' | 'sms'>('email')
+  const [showError, setShowError] = useState(false)
+  const initializationRef = useRef(false)
 
-  // Get user ID and email from multiple sources
+  // More robust data initialization
   useEffect(() => {
-    const initializeData = () => {
-      let userIdToUse: string | null = null
-      let emailToUse: string | null = null
-      let contactMethod: 'email' | 'sms' = 'email'
+    // Prevent double initialization
+    if (initializationRef.current) return
+    initializationRef.current = true
 
-      // Check verification data from AuthProvider
-      if (verificationData) {
-        userIdToUse = verificationData.userId || null
-        emailToUse = verificationData.email || null
-      }
+    const initializeData = async () => {
+      try {
+        console.log("Initializing OTP verification page...")
+        console.log("verificationData:", verificationData)
+        console.log("searchParams:", Object.fromEntries(searchParams.entries()))
+        
+        let userIdToUse: string | null = null
+        let emailToUse: string | null = null
+        let contactMethod: 'email' | 'sms' = 'email'
 
-      // Check session storage
-      if (!userIdToUse) {
-        userIdToUse = sessionStorage.getItem("verificationUserId")
-      }
-      if (!emailToUse) {
-        emailToUse = sessionStorage.getItem("verificationEmail")
-      }
-
-      // Check URL params
-      if (!userIdToUse) {
+        // 1. First check URL params (highest priority)
         userIdToUse = searchParams.get("userId")
-      }
-      if (!emailToUse) {
         emailToUse = searchParams.get("email")
-      }
+        
+        console.log("From URL params:", { userIdToUse, emailToUse })
 
-      // Get contact method preference
-      const storedContactMethod = sessionStorage.getItem("preferredContactMethod")
-      if (storedContactMethod === 'sms' || storedContactMethod === 'email') {
-        contactMethod = storedContactMethod
-      }
+        // 2. Then check verification data from AuthProvider
+        if (!userIdToUse && verificationData?.userId) {
+          userIdToUse = verificationData.userId
+        }
+        if (!emailToUse && verificationData?.email) {
+          emailToUse = verificationData.email
+        }
+        
+        console.log("After AuthProvider:", { userIdToUse, emailToUse })
 
-      if (!userIdToUse) {
-        toast.error("No user ID found. Redirecting to registration.")
-        router.push("/register")
-        return
-      }
+        // 3. Check localStorage as backup
+        if (!userIdToUse) {
+          userIdToUse = localStorage.getItem("tempUserId")
+        }
+        if (!emailToUse) {
+          emailToUse = localStorage.getItem("tempEmail")
+        }
+        
+        console.log("After localStorage:", { userIdToUse, emailToUse })
 
-      setUserId(userIdToUse)
-      setEmail(emailToUse)
-      setPreferredContactMethod(contactMethod)
-      
-      // Start with initial countdown
-      setCountdown(30)
-      setIsInitializing(false)
+        // 4. Check sessionStorage as last resort
+        if (!userIdToUse) {
+          userIdToUse = sessionStorage.getItem("verificationUserId")
+        }
+        if (!emailToUse) {
+          emailToUse = sessionStorage.getItem("verificationEmail")
+        }
+        
+        console.log("After sessionStorage:", { userIdToUse, emailToUse })
+
+        // Get contact method preference
+        const storedContactMethod = sessionStorage.getItem("preferredContactMethod")
+        if (storedContactMethod === 'sms' || storedContactMethod === 'email') {
+          contactMethod = storedContactMethod
+        }
+
+        // Set the data
+        setUserId(userIdToUse)
+        setEmail(emailToUse)
+        setPreferredContactMethod(contactMethod)
+
+        // If we have userId, start countdown
+        if (userIdToUse) {
+          setCountdown(30)
+          setShowError(false)
+        } else {
+          console.warn("No user ID found after initialization")
+          setShowError(true)
+          setError("Unable to find user verification data. Please try logging in again.")
+        }
+      } catch (error) {
+        console.error("Error initializing OTP verification:", error)
+        setShowError(true)
+        setError("An error occurred while loading verification page")
+      } finally {
+        setIsInitializing(false)
+      }
     }
 
     initializeData()
-  }, [verificationData, searchParams, router])
+  }, [verificationData, searchParams])
 
   // Countdown timer for resend
   useEffect(() => {
@@ -110,7 +143,7 @@ export default function VerifyOTPPage() {
 
   const handleSubmit = async (otpValue: string = otp) => {
     if (!userId) {
-      toast.error("User ID not found")
+      setError("User ID not found. Please try logging in again.")
       return
     }
 
@@ -132,10 +165,12 @@ export default function VerifyOTPPage() {
         duration: 3000
       })
 
-      // Clear session storage
+      // Clear all temporary storage
       sessionStorage.removeItem("verificationUserId")
       sessionStorage.removeItem("verificationEmail")
       sessionStorage.removeItem("preferredContactMethod")
+      localStorage.removeItem("tempUserId")
+      localStorage.removeItem("tempEmail")
       
       // Get return URL or default to login
       const returnUrl = sessionStorage.getItem("returnUrl") || "/login"
@@ -153,8 +188,7 @@ export default function VerifyOTPPage() {
           errorMessage = "Invalid or expired code. Please try again or request a new code."
         } else if (error.message.includes("User not found")) {
           errorMessage = "Account not found. Please try registering again."
-          // Redirect to registration after showing error
-          setTimeout(() => router.push("/register"), 2000)
+          // Don't auto-redirect, let user decide
         } else {
           errorMessage = error.message
         }
@@ -193,25 +227,34 @@ export default function VerifyOTPPage() {
       if (error.message) {
         if (error.message.includes("already verified")) {
           errorMessage = "Account is already verified"
-          // Redirect to login
-          setTimeout(() => router.push("/login"), 1000)
+          // Don't auto-redirect, let user decide
         } else if (error.message.includes("User not found")) {
           errorMessage = "Account not found. Please try registering again."
-          setTimeout(() => router.push("/register"), 2000)
         } else {
           errorMessage = error.message
         }
       }
       
-      toast.error(errorMessage)
+      setError(errorMessage)
     } finally {
       setIsResending(false)
     }
   }
 
   const handleBack = () => {
-    const returnUrl = sessionStorage.getItem("returnUrl") || "/login"
-    router.push(returnUrl)
+    router.push("/login")
+  }
+
+  const handleRetry = () => {
+    setError(null)
+    setShowError(false)
+    setIsInitializing(true)
+    initializationRef.current = false
+    
+    // Trigger re-initialization
+    setTimeout(() => {
+      setIsInitializing(false)
+    }, 500)
   }
 
   const maskEmail = (email: string | null) => {
@@ -230,6 +273,38 @@ export default function VerifyOTPPage() {
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mx-auto" />
           <p className="text-emerald-700 text-sm">Loading verification page...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (showError && !userId) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 py-8 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+        <div className="w-full max-w-md">
+          <Card className="shadow-lg border-0 bg-white/95 backdrop-blur-sm">
+            <CardContent className="p-6">
+              <div className="text-center space-y-4">
+                <AlertCircle className="h-12 w-12 text-amber-500 mx-auto" />
+                <div className="space-y-2">
+                  <h2 className="text-xl font-semibold text-gray-800">Verification Required</h2>
+                  <p className="text-gray-600 text-sm">
+                    {error || "Unable to find verification data. Please try logging in again."}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Button onClick={handleRetry} variant="outline" className="w-full">
+                    <Timer className="mr-2 h-4 w-4" />
+                    Try Again
+                  </Button>
+                  <Button onClick={() => router.push("/login")} className="w-full bg-emerald-600 hover:bg-emerald-700">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Login
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     )
