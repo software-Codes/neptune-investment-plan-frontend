@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
 
 import { LoginForm } from "@/components/auth/login-form"
@@ -8,6 +7,11 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 
+interface LoginFormData {
+  email: string
+  password: string
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -15,28 +19,23 @@ export default function LoginPage() {
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Store redirect URL from query parameters in sessionStorage
+  // Handle URL parameters and verification status
   useEffect(() => {
     const redirectTo = searchParams.get("redirectTo")
     if (redirectTo) {
       sessionStorage.setItem("redirectTo", redirectTo)
     }
     
-    // Show success message if user just completed verification
     const status = searchParams.get("status")
     const message = searchParams.get("message")
     
+    // Handle verification success
     if (status === "verified") {
       toast.success(message || "Email verified successfully!", {
         description: "You can now sign in to your account.",
         duration: 4000
       })
-      
-      // Clean up the URL
-      const url = new URL(window.location.href)
-      url.searchParams.delete("status")
-      url.searchParams.delete("message")
-      window.history.replaceState({}, "", url.toString())
+      cleanupUrlParams()
     }
     
     // Handle verification failure
@@ -45,12 +44,7 @@ export default function LoginPage() {
         description: "Please try again or request a new verification code.",
         duration: 5000
       })
-      
-      // Clean up the URL
-      const url = new URL(window.location.href)
-      url.searchParams.delete("status")
-      url.searchParams.delete("message")
-      window.history.replaceState({}, "", url.toString())
+      cleanupUrlParams()
     }
   }, [searchParams])
 
@@ -58,28 +52,31 @@ export default function LoginPage() {
   useEffect(() => {
     if (user) {
       const redirectTo = sessionStorage.getItem("redirectTo") || "/pages/user/dashboard"
-      sessionStorage.removeItem("redirectTo") // Clear after use
+      sessionStorage.removeItem("redirectTo")
       router.push(redirectTo)
     }
   }, [user, router])
 
-  const handleLogin = async (data: { email: string; password: string }) => {
-    setError(null)
-    try {
-      setIsRedirecting(true)
+  const cleanupUrlParams = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.delete("status")
+    url.searchParams.delete("message")
+    window.history.replaceState({}, "", url.toString())
+  }
 
-      // This will store token in both localStorage and cookies via AuthProvider
+  const handleLogin = async (data: LoginFormData) => {
+    setError(null)
+    setIsRedirecting(true)
+
+    try {
       await login(data.email, data.password)
-      
-      // Note: The actual redirect is handled in the login function or by the useEffect above
-      // If we reach here, it means verification is required
+      // Actual redirect is handled by the useEffect above
     } catch (error: any) {
-      console.error("Login error in page:", error)
       setIsRedirecting(false)
+      console.error("Login error:", error)
       
-      // Handle verification requirement specifically
-      if (error.requiresVerification && error.userId) {
-        handleVerificationRequired(error.userId)
+      if (error.requiresVerification) {
+        await handleVerificationRequired(error.userId, error.email, error.preferredContactMethod)
         return
       }
       
@@ -87,31 +84,32 @@ export default function LoginPage() {
     }
   }
 
-  const handleVerificationRequired = async (userId: string) => {
+  const handleVerificationRequired = async (
+    userId: string, 
+    email?: string, 
+    preferredContactMethod: string = "email"
+  ) => {
     try {
-      // Store verification data in session storage
+      // Store verification data
       sessionStorage.setItem("verificationUserId", userId)
-      sessionStorage.setItem("returnUrl", "/login")
+      sessionStorage.setItem("verificationEmail", email || "")
+      sessionStorage.setItem("preferredContactMethod", preferredContactMethod)
+      sessionStorage.setItem("returnUrl", "/pages/user/dashboard")
       
       // Navigate to verification page
       router.push("/pages/auth/otp-verify")
       
-      // Show info toast
-      toast.info("Redirecting to verification", {
-        description: "Please verify your account to continue.",
+      toast.info("Account verification required", {
+        description: `Please verify your account via ${preferredContactMethod}.`,
         duration: 3000
       })
     } catch (error) {
-      console.error("Error handling verification redirect:", error)
+      console.error("Verification redirect error:", error)
       toast.error("Navigation error", {
-        description: "Unable to redirect to verification page. Please try again.",
+        description: "Unable to proceed with verification. Please try again.",
         duration: 4000
       })
     }
-  }
-
-  const handleBackToHome = () => {
-    router.push("/")
   }
 
   if (isRedirecting) {
@@ -119,8 +117,8 @@ export default function LoginPage() {
       <div className="flex h-full w-full items-center justify-center py-12">
         <div className="text-center space-y-4">
           <div className="relative">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent mx-auto"></div>
-            <div className="absolute inset-0 h-12 w-12 rounded-full bg-emerald-500/10 animate-pulse mx-auto"></div>
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent mx-auto" />
+            <div className="absolute inset-0 h-12 w-12 rounded-full bg-emerald-500/10 animate-pulse mx-auto" />
           </div>
           <div className="space-y-1">
             <p className="text-emerald-700 font-medium">Welcome back!</p>
@@ -146,17 +144,19 @@ export default function LoginPage() {
 
         {/* Error Alert */}
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4">
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg
                   className="h-5 w-5 text-red-500"
-                  viewBox="0 0 24 24"
+                  viewBox="0 0 20 20"
                   fill="currentColor"
-                  aria-hidden="true"
                 >
-                  <path d="M10 3.6C10 3.6 15.6 5.4 16.8 11.5H7.2C8.4 5.4 14 3.6 14 3.6C13.5 2.6 12.8 2 12 2C11.2 2 10.5 2.6 10 3.6Z"></path>
-                  <path d="M22 12C22 17.5 17.5 22 12 22C6.5 22 2 17.5 2 12C2 6.5 6.5 2 12 2C17.5 2 22 6.5 22 12ZM12 4C7.1 4 3 8.1 3 13C3 17.9 7.1 22 12 22C16.9 22 21 17.9 21 13C21 8.1 16.9 4 12 4ZM7.9 13L10.4 15.5C10.7 15.8 11.1 15.8 11.4 15.5L13.9 13H7.9ZM16.1 13L16.9 14.8C17.1 14.9 17.2 15.1 17.2 15.3C17.2 15.4 17.1 15.6 17 15.7L15.6 17.1C15.5 17.2 15.3 17.3 15.2 17.3C15 17.3 14.8 17.2 14.7 17.1L13.3 15.7C13.2 15.6 13.1 15.4 13.1 15.3C13.1 15.1 13.2 14.9 13.4 14.8L14.1 13H16.1ZM12 11C12.6 11 13 10.6 13 10C13 9.4 12.6 9 12 9C11.4 9 11 9.4 11 10C11 10.6 11.4 11 12 11Z"></path>
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
               <div className="ml-3">
@@ -166,15 +166,15 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Login Form Container */}
+        {/* Login Form */}
         <div className="bg-white/90 backdrop-blur-sm border border-emerald-100 rounded-xl shadow-lg p-8">
           <LoginForm 
-            onSubmit={handleLogin} 
+            onSubmit={handleLogin}
             onVerificationRequired={handleVerificationRequired}
           />
         </div>
 
-        {/* Additional Info */}
+        {/* Footer Links */}
         <div className="text-center space-y-2">
           <p className="text-sm text-emerald-600/60">
             Not a member?{" "}
@@ -186,18 +186,18 @@ export default function LoginPage() {
             </a>
           </p>
           <p className="text-sm text-emerald-600/60">
-            Having trouble signing in?{" "}
+            Forgot your password?{" "}
             <a 
-              href="/support" 
+              href="/pages/auth/reset-password" 
               className="text-emerald-600 hover:text-emerald-700 underline underline-offset-4 transition-colors"
             >
-              Get help
+              Reset it here
             </a>
           </p>
           <button
             type="button"
-            className="text-sm text-gray-500 hover:text-gray-700"
-            onClick={handleBackToHome}
+            onClick={() => router.push("/")}
+            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
           >
             Back to homepage
           </button>

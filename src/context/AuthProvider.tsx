@@ -5,7 +5,7 @@
 
 import React, { createContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthContextType, RegistrationData, User, VerificationResponse } from '@/types/type';
+import { AuthContextType, ContactMethod, KYCDocument, OTPVerificationData, RegistrationData, User, UserProfile, VerificationResponse } from '@/types/type';
 import { apiClient, authApi } from '@/lib/api-client';
 import { toast } from 'sonner';
 import Cookies from 'js-cookie'; // Add this import
@@ -45,11 +45,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const setAuthToken = (token: string) => {
         // Store in localStorage for client-side use
         localStorage.setItem('token', token);
-        
+
         // Store in cookies for middleware (server-side) use
         Cookies.set('auth-token', token, COOKIE_OPTIONS);
     };
-    
+
     /**
      * Removes authentication token from both localStorage and cookies
      */
@@ -65,20 +65,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsLoading(true);
         try {
             const response = await authApi.register(data);
-            
+
             // Store user ID for verification page if needed
-            if (response.data?.user && response.data.user.userId) {
+            if (response.user && response.user.userId) {
                 setVerificationRedirectData({
-                    userId: response.data.user.userId,
-                    email: response.data.user.email
+                    userId: response.user.userId,
+                    email: response.user.email
                 });
-                
+
                 // Show success message with more details
                 toast.success("Registration successful!", {
-                    description: `Verification code sent via ${data.preferredContactMethod}. Please verify your account.`,
+                    description: `Verification code sent via ${data.preferred_contact_method}. Please verify your account.`,
                     duration: 5000
                 });
-                
+
                 // Redirect to verification page
                 router.push('/pages/auth/otp-verify');
             } else {
@@ -90,7 +90,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
         } catch (error: any) {
             console.error('Registration error:', error);
-            
+
             // Improved error messaging
             const errorMessage = getReadableErrorMessage(error);
             toast.error("Registration failed", {
@@ -104,37 +104,48 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     /**
-     * Checks if the user is authenticated by verifying token exists
+     * Checks if the user is authenticated by verifying token exists and validates it
      */
     const checkAuth = async () => {
         try {
-            // Check in both localStorage and cookies for token
-            const token = localStorage.getItem('token') || Cookies.get('auth-token');
-            const userData = JSON.parse(localStorage.getItem('userData') || 'null');
-            
-            if (!token || !userData) {
+            // First validate the token with the server
+            const isValid = await authApi.validateToken();
+            if (!isValid) {
+                handleLogout();
                 return false;
             }
 
-            // Ensure token is stored in both places
-            if (token) {
-                setAuthToken(token);
-            }
-            
-            setUser({
-                id: userData.userId,
-                email: userData.email,
-                name: userData.fullName,
-                role: userData.accountStatus === 'active' ? 'user' : 'pending',
-            });
+            // If token is valid, fetch current user data
+            const userData = await authApi.getCurrentUser();
 
-            return true;
+            if (userData) {
+                setUser({
+                    userId: userData.userId,
+                    email: userData.email,
+                    full_name: userData.full_name,
+                    phone_number: userData.phone_number,
+                    preferred_contact_method: userData.preferred_contact_method,
+                    account_status: userData.account_status,
+                    email_verified: userData.email_verified,
+                    phone_verified: userData.phone_verified,
+                    created_at: userData.created_at,
+                    updated_at: userData.updated_at,
+                    role: userData.account_status === 'active' ? 'user' : 'pending',
+                });
+                // Store user data in localStorage for persistence
+                localStorage.setItem('userData', JSON.stringify(userData));
+
+                return true;
+            }
+
+            return false;
         } catch (error) {
             console.error('Auth check failed:', error);
             handleLogout();
             return false;
         }
     };
+
 
     /**
      * Handles the logout cleanup
@@ -145,110 +156,85 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(null);
     };
 
-    /**
-     * Authenticates a user with email and password
-     */
     const login = async (email: string, password: string) => {
         setIsLoading(true);
         try {
             const response = await authApi.login(email, password);
-            console.log("Login response:", response); // Debug log
-            
-            // Handle the response structure based on your API format
-            const data = response.data || response;
-            const token = data.token;
-            const user = data.user;
-            
-            // Check if the response contains a token
-            if (!token) {
-                console.error('Login response missing token:', data);
-                throw new Error("Login successful but token not received. Please try again.");
-            }
 
-            // Store token in both localStorage and cookies
-            setAuthToken(token);
-            
-            // Check if user data exists and if user is verified
-            if (user && (!user.email_verified && !user.phone_verified)) {
-                // Store user data for verification page
-                const userData = {
-                    userId: user.userId,
-                    email: user.email || email
-                };
-                
-                setVerificationRedirectData(userData);
-                
-                // Store in various places for verification page
-                localStorage.setItem("tempUserId", user.userId);
-                localStorage.setItem("tempEmail", user.email || email);
-                sessionStorage.setItem("verificationUserId", user.userId);
-                sessionStorage.setItem("verificationEmail", user.email || email);
-                sessionStorage.setItem("preferredContactMethod", user.preferredContactMethod || "email");
-                sessionStorage.setItem("returnUrl", "/dashboard");
-                
-                toast.info("Account verification required", {
-                    description: "Redirecting to verification page...",
-                    duration: 3000
-                });
-                
-                router.push('/pages/auth/otp-verify');
-                return;
-            }
+            if (response.data.token) {
+                // Get user data from the response
+                const userData = response.data.user;
 
-            // Store user data in localStorage for future reference
-            if (user) {
-                localStorage.setItem('userData', JSON.stringify(user));
-                
+                // Check if user needs verification
+                if (userData && (!userData.email_verified && !userData.phone_verified)) {
+                    const verificationData = {
+                        userId: userData.userId,
+                        email: userData.email || email
+                    };
+
+                    setVerificationRedirectData(verificationData);
+
+                    // Store verification data
+                    sessionStorage.setItem("verificationUserId", userData.userId);
+                    sessionStorage.setItem("verificationEmail", userData.email || email);
+                    sessionStorage.setItem("preferredContactMethod", userData.preferred_contact_method || "email");
+                    sessionStorage.setItem("returnUrl", "/dashboard");
+
+                    toast.info("Account verification required");
+                    router.push('/pages/auth/otp-verify');
+                    return;
+                }
+
+                // Set user state with correct data structure
                 setUser({
-                    id: user.userId,
-                    email: user.email,
-                    name: user.fullName,
-                    role: user.accountStatus === 'active' ? 'user' : 'pending',
+                    userId: userData.userId,
+                    email: userData.email,
+                    full_name: userData.full_name,
+                    phone_number: userData.phone_number,
+                    preferred_contact_method: userData.preferred_contact_method,
+                    account_status: userData.account_status,
+                    email_verified: userData.email_verified,
+                    phone_verified: userData.phone_verified,
+                    created_at: new Date(userData.created_at),
+                    last_login_at: userData.last_login_at ? new Date(userData.last_login_at) : undefined,
+                    role: userData.account_status === 'active' ? 'user' : 'pending'
                 });
-                
+
+                // Update local storage
+                localStorage.setItem('userData', JSON.stringify(userData));
+
                 toast.success('Successfully logged in');
-                
-                // Use setTimeout to ensure state updates have processed
+
+                // Handle redirect
                 setTimeout(() => {
                     const redirectTo = sessionStorage.getItem('redirectTo') || '/pages/user/dashboard';
-                    sessionStorage.removeItem('redirectTo'); // Clear after use
+                    sessionStorage.removeItem('redirectTo');
                     router.push(redirectTo);
                 }, 100);
-            } else {
-                throw new Error('User data not received in response');
             }
         } catch (error: any) {
             console.error('Login error:', error);
-            
-            // Handle specific verification required error
+
+            // Handle verification required case
             if (error.requiresVerification && error.userId) {
-                const userData = {
+                setVerificationRedirectData({
                     userId: error.userId,
                     email: email
-                };
-                
-                setVerificationRedirectData(userData);
-                
-                // Store data for verification page
-                localStorage.setItem("tempUserId", error.userId);
-                localStorage.setItem("tempEmail", email);
+                });
+
                 sessionStorage.setItem("verificationUserId", error.userId);
                 sessionStorage.setItem("verificationEmail", email);
+                sessionStorage.setItem("preferredContactMethod", error.preferredContactMethod || "email");
                 sessionStorage.setItem("returnUrl", "/dashboard");
-                
-                toast.info("Account verification required", {
-                    description: "Redirecting to verification page...",
-                    duration: 3000
-                });
-                
+
+                toast.info("Account verification required");
                 router.push('/pages/auth/otp-verify');
                 return;
             }
-            
+
             const errorMessage = getReadableErrorMessage(error);
             toast.error("Login failed", {
-                description: errorMessage,
-                duration: 4000
+                description: errorMessage
             });
             throw error;
         } finally {
@@ -263,30 +249,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsLoading(true);
         try {
             await authApi.logout();
-            toast.success('Goodbye!', {
-                description: 'You have been successfully logged out.',
-                duration: 3000
-            });
+            toast.success('Successfully logged out');
         } catch (error) {
             console.error('Logout error:', error);
-            // Even if server logout fails, clear local state
-            toast.error("Logout error", {
-                description: 'An error occurred during logout, but you have been logged out locally.',
-                duration: 3000
-            });
+            toast.error("Logout failed locally");
         } finally {
             handleLogout();
             router.push('/login');
             setIsLoading(false);
         }
     };
-    
+
     /**
      * Formats error messages to be more user-friendly
      */
     const getReadableErrorMessage = (error: any): string => {
         const message = error.message || 'An unknown error occurred';
-        
+
         // Transform specific server messages
         const errorMappings: Record<string, string> = {
             'User already exists': 'An account with this email already exists. Please sign in instead.',
@@ -296,27 +275,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
             'Account is not verified': 'Your account needs verification. Please check your email or phone for the verification code.',
             'User not found': 'No account found with this email address. Please check your email or sign up for a new account.'
         };
-        
+
         // Check for specific error patterns
         for (const [pattern, userMessage] of Object.entries(errorMappings)) {
             if (message.toLowerCase().includes(pattern.toLowerCase())) {
                 return userMessage;
             }
         }
-        
+
         // Handle network and server errors
         if (message.includes('no internet') || message.includes('connect')) {
             return 'Unable to connect to the server. Please check your internet connection and try again.';
         }
-        
+
         if (message.includes('timeout')) {
             return 'The server is taking too long to respond. Please try again in a moment.';
         }
-        
+
         if (message.includes('500') || message.includes('server error')) {
             return 'The server is experiencing issues. Please try again later.';
         }
-        
+
         return message;
     };
 
@@ -334,7 +313,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         };
 
         initializeAuth();
-        
+
         // Store redirectTo from URL params if present
         const urlParams = new URLSearchParams(window.location.search);
         const redirectParam = urlParams.get('redirectTo');
@@ -351,7 +330,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
         logout,
         checkAuth,
         register,
-        verificationData: verificationRedirectData
+        verificationData: verificationRedirectData,
+        logoutAllDevices: function (): Promise<void> {
+            throw new Error('Function not implemented.');
+        },
+        verifyOTP: function (data: OTPVerificationData): Promise<void> {
+            throw new Error('Function not implemented.');
+        },
+        resendOTP: function (userId: string, method?: ContactMethod): Promise<void> {
+            throw new Error('Function not implemented.');
+        },
+        initiatePasswordReset: function (email: string): Promise<void> {
+            throw new Error('Function not implemented.');
+        },
+        completePasswordReset: function (userId: string, otpCode: string, newPassword: string): Promise<void> {
+            throw new Error('Function not implemented.');
+        },
+        getCurrentUser: function (): Promise<UserProfile> {
+            throw new Error('Function not implemented.');
+        },
+        uploadDocument: function (file: File, documentType: string, documentCountry: string): Promise<void> {
+            throw new Error('Function not implemented.');
+        },
+        getDocumentStatus: function (documentId: string): Promise<KYCDocument> {
+            throw new Error('Function not implemented.');
+        },
+        getUserDocuments: function (): Promise<KYCDocument[]> {
+            throw new Error('Function not implemented.');
+        }
     };
 
     if (!isInitialized) {
