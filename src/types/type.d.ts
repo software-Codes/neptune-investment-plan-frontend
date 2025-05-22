@@ -64,19 +64,25 @@ export interface AuthContextType {
 }
 
 export interface RegistrationData {
-  full_name: string;
+  fullName: string;
   email: string;
-  phone_number: string;
+  phoneNumber: string;
   password: string;
-  preferred_contact_method: ContactMethod;
+  preferredContactMethod: 'email' | 'phone';
 }
 
 export interface RegistrationResponse {
   success: boolean;
-  user: User;
+  user: {
+    userId: string;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    preferredContactMethod: 'email' | 'phone';
+    accountStatus: string;
+  };
   message: string;
 }
-
 export interface LoginResponse {
   success: boolean;
   data: {
@@ -187,7 +193,7 @@ export interface PasswordResetInitiationResponse {
   success: boolean;
   message: string;
   userId: string;
-  method: ContactMethod;
+  method: 'email' | 'phone';
   destination: string;
 }
 

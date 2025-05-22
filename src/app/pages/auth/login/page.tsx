@@ -25,10 +25,10 @@ export default function LoginPage() {
     if (redirectTo) {
       sessionStorage.setItem("redirectTo", redirectTo)
     }
-    
+
     const status = searchParams.get("status")
     const message = searchParams.get("message")
-    
+
     // Handle verification success
     if (status === "verified") {
       toast.success(message || "Email verified successfully!", {
@@ -37,7 +37,7 @@ export default function LoginPage() {
       })
       cleanupUrlParams()
     }
-    
+
     // Handle verification failure
     if (status === "verification-failed") {
       toast.error(message || "Verification failed", {
@@ -74,19 +74,19 @@ export default function LoginPage() {
     } catch (error: any) {
       setIsRedirecting(false)
       console.error("Login error:", error)
-      
+
       if (error.requiresVerification) {
         await handleVerificationRequired(error.userId, error.email, error.preferredContactMethod)
         return
       }
-      
+
       setError(error.message || "Login failed. Please check your credentials.")
     }
   }
 
   const handleVerificationRequired = async (
-    userId: string, 
-    email?: string, 
+    userId: string,
+    email?: string,
     preferredContactMethod: string = "email"
   ) => {
     try {
@@ -95,10 +95,10 @@ export default function LoginPage() {
       sessionStorage.setItem("verificationEmail", email || "")
       sessionStorage.setItem("preferredContactMethod", preferredContactMethod)
       sessionStorage.setItem("returnUrl", "/pages/user/dashboard")
-      
+
       // Navigate to verification page
       router.push("/pages/auth/otp-verify")
-      
+
       toast.info("Account verification required", {
         description: `Please verify your account via ${preferredContactMethod}.`,
         duration: 3000
@@ -168,24 +168,24 @@ export default function LoginPage() {
 
         {/* Login Form */}
         <div className="bg-white/90 backdrop-blur-sm border border-emerald-100 rounded-xl shadow-lg p-8">
-          <LoginForm 
+          <LoginForm
             onSubmit={handleLogin}
             onVerificationRequired={handleVerificationRequired}
           />
         </div>
 
         {/* Footer Links */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-">
           <p className="text-sm text-emerald-600/60">
             Not a member?{" "}
-            <a 
-              href="/pages/auth/register" 
+            <a
+              href="/pages/auth/register"
               className="text-emerald-600 hover:text-emerald-700 underline underline-offset-4 transition-colors"
             >
               Create an account
             </a>
           </p>
-          <p className="text-sm text-emerald-600/60">
+          {/* <p className="text-sm text-emerald-600/60">
             Forgot your password?{" "}
             <a 
               href="/pages/auth/reset-password" 
@@ -193,14 +193,14 @@ export default function LoginPage() {
             >
               Reset it here
             </a>
-          </p>
-          <button
+          </p> */}
+          {/* <button
             type="button"
             onClick={() => router.push("/")}
             className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
           >
             Back to homepage
-          </button>
+          </button> */}
         </div>
       </div>
     </div>

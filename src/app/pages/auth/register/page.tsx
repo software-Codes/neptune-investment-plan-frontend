@@ -1,59 +1,52 @@
 "use client"
 
-import { RegisterForm } from '@/components/auth/register-form'
-import { useAuth } from "@/hooks/useAuth"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { RegisterForm } from "@/components/auth/register-form"
+import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
-import { RegistrationData } from '@/types/type'
 
-export default function SignupPage() {
+export default function RegisterPage() {
   const router = useRouter()
-  const { register, user } = useAuth()
-  const [isRedirecting, setIsRedirecting] = useState(false)
-
-  // Redirect to dashboard if already logged in
-  useEffect(() => {
-    if (user) {
-      setIsRedirecting(true)
-      router.push("/dashboard")
-    }
-  }, [user, router])
-
-  const handleRegistration = async (data: RegistrationData) => {
-    try {
-      await register(data)
-      // Redirect happens in the register function after successful registration
-    } catch (error) {
-      // Error handling is managed by the RegisterForm component
-      throw error
-    }
-  }
-
-  if (isRedirecting) {
-    return (
-      <div className="flex h-full w-full items-center justify-center py-12">
-        <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent mx-auto"></div>
-          <p className="text-emerald-700">Redirecting to dashboard...</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-emerald-800">
-          Create an Account
-        </h1>
-        <p className="text-emerald-600/70">
-          Please fill in your information to create your account
-        </p>
-      </div>
-
-      {/* Registration Form */}
-      <RegisterForm onSubmit={handleRegistration} />
+    <div className="min-h-screen flex flex-col  bg-gradient-to-br from-emerald-50 via-white to-teal-50 px-4 py-12">
+      <Card className="w-full max-w-md shadow-xl border-emerald-100/50">
+        <CardHeader className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/pages/auth/login')}
+              className="hover:bg-emerald-100/50"
+            >
+              <ArrowLeft className="h-5 w-5 text-emerald-600" />
+            </Button>
+            <CardTitle className="text-2xl font-bold text-emerald-800">
+              Create Your Account
+            </CardTitle>
+          </div>
+          <CardDescription className="text-emerald-600/70">
+            Join Neptune Investment Platform and start your financial journey
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RegisterForm />
+          
+          <div className="mt-6 text-center">
+            <p className="text-sm text-emerald-600">
+              Already have an account?{' '}
+              <Button 
+                variant="link" 
+                onClick={() => router.push('/pages/auth/login')}
+                className="text-emerald-700 hover:text-emerald-900"
+              >
+                Sign in
+              </Button>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -18,9 +18,12 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           <Image
             src={NeptuneLogo}
             alt="Neptune Logo" 
-            className="h-12 w-auto rounded-full shadow-sm"
+            className="h-24 w-auto rounded-full shadow-sm"
           />
         </Link>
+        {/* <div className="flex justify-end text-black">
+          <ModeToggle />
+        </div> */}
       </div>
 
       {/* Auth Content */}

@@ -70,38 +70,110 @@ axiosInstance.interceptors.request.use((config) => {
  * Response interceptor
  * Handles common error cases and transforms error responses
  */
+// Update the response interceptor in the axiosInstance configuration
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    // Network or server errors
+    console.error('Full error object:', error);
+
+    // Network errors (no response received)
     if (!error.response) {
-      throw new Error('Network error. Please check your connection.');
+      // More detailed network error handling
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Request timed out. Please check your internet connection.');
+      }
+      
+      if (error.message.includes('Network Error')) {
+        throw new Error('Unable to connect to the server. Please check your internet connection.');
+      }
+
+      // Fallback generic network error
+      throw new Error('Network error. Unable to complete the request.');
     }
 
+    // Server responded with an error
     const errorResponse = error.response?.data as APIResponse;
-    
-    // Handle specific error cases
-    switch (error.response.status) {
+    const statusCode = error.response.status;
+
+    console.error('Server error response:', errorResponse);
+
+    // Detailed error handling based on status code
+    switch (statusCode) {
+      case 400:
+        // Bad request - typically validation errors
+        throw new Error(
+          errorResponse.message || 
+          'Invalid request. Please check your input and try again.'
+        );
+      
       case 401:
-        // Clear auth tokens on unauthorized
+        // Unauthorized - clear auth tokens
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token');
           Cookies.remove('auth-token');
         }
-        break;
+        throw new Error(
+          errorResponse.message || 
+          'Authentication failed. Please log in again.'
+        );
+      
       case 403:
+        // Forbidden - handle specific verification scenarios
         if (errorResponse.message?.includes('verification')) {
-          const verificationError = new Error(errorResponse.message);
+          const verificationError = new Error(
+            errorResponse.message || 
+            'Account requires verification. Please verify your account.'
+          );
           Object.assign(verificationError, {
             requiresVerification: true,
             userId: errorResponse.data?.userId
           });
           throw verificationError;
         }
-        break;
+        throw new Error(
+          errorResponse.message || 
+          'Access denied. You do not have permission to perform this action.'
+        );
+      
+      case 404:
+        throw new Error(
+          errorResponse.message || 
+          'The requested resource was not found.'
+        );
+      
+      case 409:
+        // Conflict - typically for duplicate entries
+        throw new Error(
+          errorResponse.message || 
+          'A conflict occurred. The resource may already exist.'
+        );
+      
+      case 422:
+        // Unprocessable Entity - validation errors
+        throw new Error(
+          errorResponse.message || 
+          'Validation failed. Please check your input.'
+        );
+      
+      case 429:
+        // Too Many Requests
+        throw new Error(
+          'Too many requests. Please wait a moment and try again.'
+        );
+      
+      case 500:
+        // Internal Server Error
+        throw new Error(
+          'Server error. Our team has been notified. Please try again later.'
+        );
+      
+      default:
+        // Generic error for any other status codes
+        throw new Error(
+          errorResponse.message || 
+          'An unexpected error occurred. Please try again.'
+        );
     }
-
-    throw new Error(errorResponse.message || 'An error occurred');
   }
 );
 
@@ -204,39 +276,58 @@ export const authApi = {
    * @param {RegistrationData} userData - User registration data
    * @returns {Promise<RegistrationResponse>} Registration confirmation and user data
    */
- register: async (userData: RegistrationData): Promise<RegistrationResponse> => {
-  try {
-    // Input validation
-    if (!userData.email || !userData.password || !userData.full_name || !userData.phone_number) {
-      throw new Error('All required fields must be filled');
+  register: async (userData: RegistrationData): Promise<RegistrationResponse> => {
+    try {
+      // Input validation
+      if (!userData.email || !userData.password || !userData.fullName || !userData.phoneNumber) {
+        throw new Error('All required fields must be filled');
+      }
+  
+      console.log('Registration attempt:', { 
+        email: userData.email, 
+        apiUrl: API_BASE_URL 
+      });
+  
+      const response = await axiosInstance.post<RegistrationResponse>('/api/v1/auth/register', {
+        fullName: userData.fullName,
+        email: userData.email,
+        phoneNumber: userData.phoneNumber,
+        password: userData.password,
+        preferredContactMethod: userData.preferredContactMethod
+      });
+  
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Registration failed');
+      }
+  
+      // Store verification data
+      if (response.data?.user?.userId) {
+        sessionStorage.setItem('verificationUserId', response.data.user.userId);
+        sessionStorage.setItem('verificationEmail', userData.email);
+        sessionStorage.setItem('preferredContactMethod', userData.preferredContactMethod);
+        sessionStorage.setItem('returnUrl', '/pages/user/dashboard');
+      }
+  
+      return response.data;
+    } catch (error: any) {
+      console.error('Registration failed:', error);
+      
+      // More specific error handling
+      if (error.response) {
+        // Server responded with an error
+        const serverError = error.response.data;
+        
+        if (serverError.message) {
+          // Use specific server error message
+          throw new Error(serverError.message);
+        }
+      }
+  
+      // Fallback to original error message or generic error
+      throw error;
     }
-
-    const response = await axiosInstance.post('/api/v1/auth/register', {
-      fullName: userData.full_name,
-      email: userData.email,
-      phoneNumber: userData.phone_number,
-      password: userData.password,
-      preferredContactMethod: userData.preferred_contact_method
-    });
-
-    if (!response.data?.success) {
-      throw new Error(response.data?.message || 'Registration failed');
-    }
-
-    // Store verification data
-    if (response.data?.user?.userId) {
-      sessionStorage.setItem('verificationUserId', response.data.user.userId);
-      sessionStorage.setItem('verificationEmail', userData.email);
-      sessionStorage.setItem('preferredContactMethod', userData.preferred_contact_method);
-    }
-
-    return response.data;
-  } catch (error: any) {
-    console.error('Registration failed:', error);
-    throw new Error(error.message || 'Registration failed');
-  }
-},
-
+  },
+ 
   /**
    * Resends OTP verification code with enhanced error handling
    * @param {string} userId - User ID
@@ -385,84 +476,118 @@ validateToken: async () => {
    * @param {string} email - User's email address
    * @returns {Promise<PasswordResetInitiationResponse>} Reset request confirmation
    */
-  requestPasswordReset: async (
-    email: string
-  ): Promise<PasswordResetInitiationResponse> => {
-    try {
-      if (!email) {
-        throw new Error("Email is required to reset password.");
-      }
+// Add or update in the authApi object
+// Add/Update these methods in the authApi object
 
-      const response =
-        await axiosInstance.post<PasswordResetInitiationResponse>(
-          "/api/v1/auth/request-reset",
-          {
-            email,
-          }
-        );
-
-      return response.data;
-    } catch (error: any) {
-      console.error("Password reset request failed:", error);
-
-      // Even for "user not found" cases, provide a generic message for security
-      if (error.message.includes("User not found")) {
-        throw new Error(
-          "If an account exists with this email, reset instructions have been sent."
-        );
-      }
-
-      throw error;
+/**
+ * Password reset request - initiates the process using email
+ * @param {string} email - User's email address
+ * @returns {Promise<PasswordResetInitiationResponse>} Reset request confirmation
+ */
+requestPasswordReset: async (email: string): Promise<PasswordResetInitiationResponse> => {
+  try {
+    if (!email) {
+      throw new Error("Email is required to reset password.");
     }
-  },
 
-  /**
-   * Password reset completion
-   * @param {string} token - Reset token from email
-   * @param {string} newPassword - New password
-   * @returns {Promise<PasswordResetCompletionResponse>} Reset completion confirmation
-   */
-  completePasswordReset: async (
-    token: string,
-    newPassword: string
-  ): Promise<PasswordResetCompletionResponse> => {
-    try {
-      if (!token || !newPassword) {
-        throw new Error("Token and new password are required.");
+    const response = await axiosInstance.post<{
+      success: boolean;
+      message: string;
+      data: {
+        userId: string;
+        method: 'email' | 'phone';
+        destination: string;
       }
+    }>("/api/v1/auth/initiate-password-reset", {
+      email,
+    });
 
-      const response =
-        await axiosInstance.post<PasswordResetCompletionResponse>(
-          "/api/v1/auth/reset-password",
-          {
-            token,
-            newPassword,
-          }
-        );
-
-      return response.data;
-    } catch (error: any) {
-      console.error("Password reset completion failed:", error);
-
-      if (
-        error.message.includes("expired") ||
-        error.message.includes("invalid token")
-      ) {
-        throw new Error(
-          "This password reset link has expired or is invalid. Please request a new one."
-        );
-      } else if (
-        error.message.includes("password") &&
-        error.message.includes("requirements")
-      ) {
-        throw new Error(
-          "Password does not meet security requirements. Please use a stronger password."
-        );
-      }
-
-      throw error;
+    // Enhanced response handling
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to initiate password reset");
     }
-  },
+
+    return {
+      success: true,
+      message: response.data.message,
+      userId: response.data.data.userId,
+      method: response.data.data.method,
+      destination: response.data.data.destination
+    };
+  } catch (error: any) {
+    console.error("Password reset request failed:", error);
+
+    // Enhanced error handling with user-friendly messages
+    if (error.response?.status === 429) {
+      throw new Error("Too many attempts. Please wait a few minutes before trying again.");
+    }
+
+    if (error.response?.status === 404) {
+      // Generic message for security
+      throw new Error("If an account exists with this email, you will receive reset instructions.");
+    }
+
+    throw new Error(error.message || "Failed to send reset instructions. Please try again.");
+  }
+},
+
+/**
+ * Password reset completion
+ * @param {string} userId - User ID from initial reset request
+ * @param {string} otpCode - OTP code received by user
+ * @param {string} newPassword - New password to set
+ * @returns {Promise<PasswordResetCompletionResponse>} Reset completion confirmation
+ */
+completePasswordReset: async (
+  userId: string,
+  otpCode: string,
+  newPassword: string
+): Promise<PasswordResetCompletionResponse> => {
+  try {
+    if (!userId || !otpCode || !newPassword) {
+      throw new Error("User ID, OTP code, and new password are required.");
+    }
+
+    const response = await axiosInstance.post<{
+      success: boolean;
+      message: string;
+    }>("/api/v1/auth/complete-password-reset", {
+      userId,
+      otpCode,
+      newPassword,
+    });
+
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Password reset failed");
+    }
+
+    return {
+      success: true,
+      message: response.data.message || "Password reset successful"
+    };
+  } catch (error: any) {
+    console.error("Password reset completion failed:", error);
+
+    if (
+      error.message.includes("expired") ||
+      error.message.includes("invalid")
+    ) {
+      throw new Error(
+        "The recovery code has expired or is invalid. Please request a new one."
+      );
+    } else if (
+      error.message.includes("password") &&
+      error.message.includes("requirements")
+    ) {
+      throw new Error(
+        "Password does not meet security requirements. Please use a stronger password."
+      );
+    }
+
+    throw error;
+  }
+},
+
   /**
    * Fetches the current user's profile
    * @returns {Promise<UserProfile>} User profile data

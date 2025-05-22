@@ -241,7 +241,7 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
                 <div className="flex items-center justify-between">
                   <FormLabel className="text-emerald-800 font-medium">Password</FormLabel>
                   <a
-                    href="/pages/auth/forgot-password"
+                    href="/pages/auth/complete-recovery"
                     className="text-sm text-emerald-600 hover:text-emerald-700 underline-offset-4 hover:underline transition-colors"
                   >
                     Forgot password?
