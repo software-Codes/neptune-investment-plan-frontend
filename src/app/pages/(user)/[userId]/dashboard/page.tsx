@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react'
 import { useAuth } from "@/hooks/useAuth"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { authApi } from "@/lib/api-client"
+import { authApi } from "@/lib/api/api-client"
 import { 
   Home, 
   Wallet, 

@@ -6,7 +6,7 @@
 import React, { createContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthContextType, ContactMethod, KYCDocument, OTPVerificationData, RegistrationData, User, UserProfile, VerificationResponse } from '@/types/type';
-import { apiClient, authApi } from '@/lib/api-client';
+import { apiClient, authApi } from '@/lib/api/api-client';
 import { toast } from 'sonner';
 import Cookies from 'js-cookie'; // Add this import
 

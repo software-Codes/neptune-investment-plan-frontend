@@ -21,7 +21,7 @@ import {
 import { Icons } from "@/components/ui/icons"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { X, ShieldCheck, Loader2, Mail, ArrowRight, RefreshCw } from "lucide-react"
-import { authApi } from "@/lib/api-client"
+import { authApi } from "@/lib/api/api-client"
 
 // Define the form validation schema
 const loginFormSchema = z.object({

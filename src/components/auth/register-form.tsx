@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select"
 import { Eye, EyeOff } from "lucide-react"
 import { RegistrationData } from "@/types/type"
-import { authApi } from "@/lib/api-client"
+import { authApi } from "@/lib/api/api-client"
 
 // Phone number regex for international format
 const phoneRegex = /^\+?[1-9]\d{1,14}$/;

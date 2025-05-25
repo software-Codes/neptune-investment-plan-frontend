@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
-import { authApi } from "@/lib/api-client"
+import { authApi } from "@/lib/api/api-client"
 import { useAuth } from "@/hooks/useAuth"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
