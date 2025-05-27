@@ -196,7 +196,19 @@ export interface PasswordResetInitiationResponse {
   method: 'email' | 'phone';
   destination: string;
 }
-
+export interface PasswordResetState {
+  email: string;
+  userId: string;
+  method: 'email' | 'phone';
+  destination: string;
+  attempts: number;
+  lastAttempt?: Date;
+}
+export interface PasswordResetFormState {
+  otpCode: string;
+  newPassword: string;
+  confirmPassword: string;
+}
 export interface PasswordResetCompletionResponse {
   success: boolean;
   message: string;

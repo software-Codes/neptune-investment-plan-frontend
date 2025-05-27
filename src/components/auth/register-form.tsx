@@ -104,7 +104,7 @@ export function RegisterForm() {
       })
 
       // Redirect to verification page
-      router.push('/pages/auth/otp-verify')
+      router.push('/auth/otp-verify')
     } catch (error: any) {
       // Handle registration errors
       const errorMessage = error.message || "Registration failed"

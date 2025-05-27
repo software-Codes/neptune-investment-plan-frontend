@@ -22,6 +22,7 @@ import { Icons } from "@/components/ui/icons"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { X, ShieldCheck, Loader2, Mail, ArrowRight, RefreshCw } from "lucide-react"
 import { authApi } from "@/lib/api/api-client"
+import { PasswordStrength } from "../ui/password-strength"
 
 // Define the form validation schema
 const loginFormSchema = z.object({
@@ -105,24 +106,24 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
     }
   }
 
-  // const handleResendVerification = async () => {
-  //   if (!userData?.userId) return;
+  const handleResendVerification = async () => {
+    if (!userData?.userId) return;
 
-  //   try {
-  //     setResendingCode(true)
-  //     await authApi.resendOTP(userData.userId)
-  //     toast.success("Verification code sent!", {
-  //       description: `A new verification code has been sent to ${userData.email}`
-  //     })
-  //   } catch (error: any) {
-  //     const message = error instanceof Error ? error.message : "Failed to send verification code"
-  //     toast.error("Failed to send code", {
-  //       description: message
-  //     })
-  //   } finally {
-  //     setResendingCode(false)
-  //   }
-  // }
+    try {
+      setResendingCode(true)
+      await authApi.resendOTP(userData.userId)
+      toast.success("Verification code sent!", {
+        description: `A new verification code has been sent to ${userData.email}`
+      })
+    } catch (error: any) {
+      const message = error instanceof Error ? error.message : "Failed to send verification code"
+      toast.error("Failed to send code", {
+        description: message
+      })
+    } finally {
+      setResendingCode(false)
+    }
+  }
 
   const handleVerifyAccount = () => {
     if (userData?.userId && onVerificationRequired) {
@@ -179,7 +180,7 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
                     Verify Now
                     <ArrowRight className="h-4 w-4" />
                   </Button>
-                  {/* <Button
+                  <Button
                     onClick={handleResendVerification}
                     variant="outline"
                     size="sm"
@@ -193,11 +194,11 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
                       </>
                     ) : (
                       <>
-                        <RefreshCw className="h-4 w-4" />
+                        <RefreshCw className="h -4 w-4" />
                         Resend Code
                       </>
                     )}
-                  </Button> */}
+                  </Button>
                 </div>
               </AlertDescription>
             </div>
@@ -241,7 +242,7 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
                 <div className="flex items-center justify-between">
                   <FormLabel className="text-emerald-800 font-medium">Password</FormLabel>
                   <a
-                    href="/pages/auth/complete-recovery"
+                    href="/auth/complete-recovery"
                     className="text-sm text-emerald-600 hover:text-emerald-700 underline-offset-4 hover:underline transition-colors"
                   >
                     Forgot password?
@@ -255,7 +256,8 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
                     className="h-12 border-emerald-200 bg-emerald-50/50 text-emerald-900 focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
                   />
                 </FormControl>
-                <FormMessage className="text-red-500 text-sm" />
+                {/* <FormMessage className="text-red-500 text-sm" /> */}
+                <PasswordStrength password={field.value} />
               </FormItem>
             )}
           />

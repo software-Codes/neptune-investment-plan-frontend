@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/form'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { PasswordStrength } from '@/components/ui/password-strength'
 
 // Form validation schemas
 const initiateRecoverySchema = z.object({
@@ -29,15 +30,21 @@ const initiateRecoverySchema = z.object({
 })
 
 const completeRecoverySchema = z.object({
-  otpCode: z.string().length(6, {
-    message: "OTP must be exactly 6 digits.",
-  }),
+  otpCode: z.string()
+    .length(6, { message: "Recovery code must be exactly 6 digits" })
+    .regex(/^\d+$/, { message: "Recovery code must contain only numbers" }),
   newPassword: z.string()
-    .min(8, { message: "Password must be at least 8 characters long" })
-    .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
-    .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
-    .regex(/[0-9]/, { message: "Password must contain at least one number" }),
-})
+    .min(8, { message: "Password must be at least 8 characters" })
+    .regex(/[A-Z]/, { message: "Include at least one uppercase letter" })
+    .regex(/[a-z]/, { message: "Include at least one lowercase letter" })
+    .regex(/[0-9]/, { message: "Include at least one number" })
+    .regex(/[^A-Za-z0-9]/, { message: "Include at least one special character" }),
+  confirmPassword: z.string()
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"]
+});
+
 
 type InitiateRecoveryFormValues = z.infer<typeof initiateRecoverySchema>
 type CompleteRecoveryFormValues = z.infer<typeof completeRecoverySchema>
@@ -140,8 +147,8 @@ export default function CompleteRecoveryPage() {
     setIsLoading(true)
     try {
       await authApi.completePasswordReset(
-        recoveryData.userId, 
-        data.otpCode, 
+        recoveryData.userId,
+        data.otpCode,
         data.newPassword
       )
 
@@ -169,32 +176,41 @@ export default function CompleteRecoveryPage() {
   /**
    * Resends the OTP for password recovery
    */
-  const handleResendCode = async () => {
-    if (!recoveryData?.email) {
-      toast.error("Recovery session expired", {
-        description: "Please start the recovery process again."
-      })
-      return
+ // Add rate limiting logic
+const handleResendCode = async () => {
+  try {
+    const resetState = JSON.parse(sessionStorage.getItem('passwordResetState') || '{}');
+    
+    if (resetState.lastAttempt) {
+      const timeSinceLastAttempt = Date.now() - new Date(resetState.lastAttempt).getTime();
+      const cooldownPeriod = resetState.attempts > 3 ? 300000 : 60000; // 5 mins after 3 attempts
+      
+      if (timeSinceLastAttempt < cooldownPeriod) {
+        const remainingTime = Math.ceil((cooldownPeriod - timeSinceLastAttempt) / 60000);
+        toast.error(`Please wait ${remainingTime} minutes before requesting another code`);
+        return;
+      }
     }
 
-    setIsLoading(true)
-    try {
-      const response = await authApi.requestPasswordReset(recoveryData.email)
+    setIsLoading(true);
+    const response = await authApi.requestPasswordReset(resetState.email);
+    
+    // Update reset state
+    resetState.attempts += 1;
+    resetState.lastAttempt = new Date();
+    sessionStorage.setItem('passwordResetState', JSON.stringify(resetState));
 
-      // Update stored user ID in case it changed
-      sessionStorage.setItem('resetUserId', response.userId)
-
-      toast.success("Code Resent!", {
-        description: `New OTP sent to ${recoveryData.destination}`
-      })
-    } catch (error: any) {
-      toast.error("Failed to resend code", {
-        description: error.message
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    toast.success("New code sent!", {
+      description: `Code sent to ${response.destination}`
+    });
+  } catch (error: any) {
+    toast.error("Failed to resend code", {
+      description: error.message
+    });
+  } finally {
+    setIsLoading(false);
   }
+};
 
   /**
    * Masks the destination email or phone number for privacy
@@ -203,23 +219,23 @@ export default function CompleteRecoveryPage() {
    */
   const maskDestination = (destination?: string): string => {
     if (!destination) return "your contact method"
-    
+
     // Email masking
     if (destination.includes('@')) {
       const [local, domain] = destination.split('@')
       return `${local[0]}****${local.slice(-1)}@${domain}`
     }
-    
+
     // Phone number masking
     return destination.slice(0, -4).replace(/\d/g, '*') + destination.slice(-4)
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 px-4 py-12">
-      <Card className="w-full max-w-md shadow-xl border-emerald-100/50">
+      <Card className="w-full bg-white/90 max-w-md shadow-xl border-emerald-100/50">
         <CardHeader className="space-y-3">
           <div className="flex items-center gap-2">
-            <Button 
+            <Button
               variant="ghost"
               size="icon"
               onClick={() => router.push('/pages/auth/login')}
@@ -232,7 +248,7 @@ export default function CompleteRecoveryPage() {
             </CardTitle>
           </div>
           <CardDescription className="text-emerald-600/70">
-            {recoveryStep === 'initiate' 
+            {recoveryStep === 'initiate'
               ? "Enter your email to start the password reset process."
               : `Enter the OTP sent to ${maskDestination(recoveryData?.destination)}`}
           </CardDescription>
@@ -281,39 +297,54 @@ export default function CompleteRecoveryPage() {
           ) : (
             <Form {...completeForm}>
               <form onSubmit={completeForm.handleSubmit(handleCompleteRecovery)} className="space-y-6">
-              
-<FormField
-  control={completeForm.control}
-  name="otpCode"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel className="text-emerald-800 font-medium">
-        Recovery Code
-      </FormLabel>
-      <FormControl>
-        <div className="relative">
-          <Input
-            {...field}
-            type="text"
-            placeholder="Enter 6-digit OTP"
-            className="h-12 border-emerald-200 bg-emerald-50/50 text-emerald-900 focus:border-emerald-500 focus:ring-emerald-500 tracking-[0.5em] text-center"
-            disabled={isLoading}
-            maxLength={6}
-            pattern="\d{6}"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            onChange={(e) => {
-              // Only allow numeric input
-              const value = e.target.value.replace(/\D/g, '');
-              field.onChange(value);
-            }}
-          />
-        </div>
-      </FormControl>
-      <FormMessage className="text-red-500 text-sm" />
-    </FormItem>
-  )}
-/>
+
+                <FormField
+                  control={completeForm.control}
+                  name="otpCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-emerald-800 font-medium">
+                        Recovery Code
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            {...field}
+                            type="text"
+                            placeholder="000000"
+                            className="h-12 border-emerald-200 bg-emerald-50/50 text-emerald-900 focus:border-emerald-500 focus:ring-emerald-500 tracking-[0.5em] text-center font-mono"
+                            disabled={isLoading}
+                            maxLength={6}
+                            pattern="\d{6}"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            value={field.value}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                              field.onChange(value);
+                            }}
+                            onPaste={(e) => {
+                              e.preventDefault();
+                              const pastedText = e.clipboardData.getData('text');
+                              const numericOnly = pastedText.replace(/[^0-9]/g, '').slice(0, 6);
+                              field.onChange(numericOnly);
+                            }}
+                            onKeyDown={(e) => {
+                              // Allow only numbers, backspace, delete, arrow keys
+                              if (
+                                !/^\d$/.test(e.key) &&
+                                !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)
+                              ) {
+                                e.preventDefault();
+                              }
+                            }}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-red-500 text-sm" />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={completeForm.control}
@@ -342,7 +373,8 @@ export default function CompleteRecoveryPage() {
                           </button>
                         </div>
                       </FormControl>
-                      <FormMessage className="text-red-500 text-sm" />
+                      {/* <FormMessage className="text-red-500 text-sm" /> */}
+                      <PasswordStrength  password={field.value} />
                     </FormItem>
                   )}
                 />

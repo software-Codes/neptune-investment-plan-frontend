@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
+import Link from "next/link"
 
 interface LoginFormData {
   email: string
@@ -51,7 +52,7 @@ export default function LoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      const redirectTo = sessionStorage.getItem("redirectTo") || "/pages/user/dashboard"
+      const redirectTo = sessionStorage.getItem("redirectTo") || "/[userId]/dashboard"
       sessionStorage.removeItem("redirectTo")
       router.push(redirectTo)
     }
@@ -94,10 +95,10 @@ export default function LoginPage() {
       sessionStorage.setItem("verificationUserId", userId)
       sessionStorage.setItem("verificationEmail", email || "")
       sessionStorage.setItem("preferredContactMethod", preferredContactMethod)
-      sessionStorage.setItem("returnUrl", "/pages/user/dashboard")
+      sessionStorage.setItem("returnUrl", "/[userId]/dashboard")
 
       // Navigate to verification page
-      router.push("/pages/auth/otp-verify")
+      router.push("/auth/otp-verify")
 
       toast.info("Account verification required", {
         description: `Please verify your account via ${preferredContactMethod}.`,
@@ -178,12 +179,12 @@ export default function LoginPage() {
         <div className="text-center space-">
           <p className="text-sm text-emerald-600/60">
             Not a member?{" "}
-            <a
-              href="/pages/auth/register"
+            <Link
+              href="/auth/register"
               className="text-emerald-600 hover:text-emerald-700 underline underline-offset-4 transition-colors"
             >
               Create an account
-            </a>
+            </Link>
           </p>
           {/* <p className="text-sm text-emerald-600/60">
             Forgot your password?{" "}

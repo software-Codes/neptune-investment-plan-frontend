@@ -12,6 +12,7 @@ import {
   UserProfile,
   KYCDocument,
   APIResponse,
+  PasswordResetState,
 } from "@/types/type";
 import Cookies from "js-cookie";
 
@@ -486,26 +487,23 @@ validateToken: async () => {
  */
 requestPasswordReset: async (email: string): Promise<PasswordResetInitiationResponse> => {
   try {
-    if (!email) {
-      throw new Error("Email is required to reset password.");
-    }
+    const response = await axiosInstance.post("/api/v1/auth/initiate-password-reset", { email });
 
-    const response = await axiosInstance.post<{
-      success: boolean;
-      message: string;
-      data: {
-        userId: string;
-        method: 'email' | 'phone';
-        destination: string;
-      }
-    }>("/api/v1/auth/initiate-password-reset", {
-      email,
-    });
-
-    // Enhanced response handling
     if (!response.data?.success) {
       throw new Error(response.data?.message || "Failed to initiate password reset");
     }
+
+    // Store reset attempt data
+    const resetState: PasswordResetState = {
+      email,
+      userId: response.data.data.userId,
+      method: response.data.data.method,
+      destination: response.data.data.destination,
+      attempts: 1,
+      lastAttempt: new Date()
+    };
+    
+    sessionStorage.setItem('passwordResetState', JSON.stringify(resetState));
 
     return {
       success: true,
@@ -515,22 +513,14 @@ requestPasswordReset: async (email: string): Promise<PasswordResetInitiationResp
       destination: response.data.data.destination
     };
   } catch (error: any) {
-    console.error("Password reset request failed:", error);
-
-    // Enhanced error handling with user-friendly messages
+    // Enhanced error handling
     if (error.response?.status === 429) {
-      throw new Error("Too many attempts. Please wait a few minutes before trying again.");
+      const resetState = JSON.parse(sessionStorage.getItem('passwordResetState') || '{}');
+      throw new Error(`Too many attempts. Please wait ${resetState.cooldown || 5} minutes before trying again.`);
     }
-
-    if (error.response?.status === 404) {
-      // Generic message for security
-      throw new Error("If an account exists with this email, you will receive reset instructions.");
-    }
-
-    throw new Error(error.message || "Failed to send reset instructions. Please try again.");
+    throw error;
   }
 },
-
 /**
  * Password reset completion
  * @param {string} userId - User ID from initial reset request
@@ -544,44 +534,36 @@ completePasswordReset: async (
   newPassword: string
 ): Promise<PasswordResetCompletionResponse> => {
   try {
+    // Validate input
     if (!userId || !otpCode || !newPassword) {
-      throw new Error("User ID, OTP code, and new password are required.");
+      throw new Error("All fields are required");
     }
 
-    const response = await axiosInstance.post<{
-      success: boolean;
-      message: string;
-    }>("/api/v1/auth/complete-password-reset", {
+    // Password strength validation
+    if (newPassword.length < 8) {
+      throw new Error("Password must be at least 8 characters long");
+    }
+
+    const response = await axiosInstance.post("/api/v1/auth/complete-password-reset", {
       userId,
       otpCode,
-      newPassword,
+      newPassword
     });
 
-    if (!response.data?.success) {
-      throw new Error(response.data?.message || "Password reset failed");
-    }
+    // Clear reset state on success
+    sessionStorage.removeItem('passwordResetState');
 
     return {
       success: true,
-      message: response.data.message || "Password reset successful"
+      message: response.data.message || "Password successfully reset"
     };
   } catch (error: any) {
-    console.error("Password reset completion failed:", error);
-
-    if (
-      error.message.includes("expired") ||
-      error.message.includes("invalid")
-    ) {
-      throw new Error(
-        "The recovery code has expired or is invalid. Please request a new one."
-      );
-    } else if (
-      error.message.includes("password") &&
-      error.message.includes("requirements")
-    ) {
-      throw new Error(
-        "Password does not meet security requirements. Please use a stronger password."
-      );
+    // Update attempts count
+    const resetState = JSON.parse(sessionStorage.getItem('passwordResetState') || '{}');
+    if (resetState.attempts) {
+      resetState.attempts += 1;
+      resetState.lastAttempt = new Date();
+      sessionStorage.setItem('passwordResetState', JSON.stringify(resetState));
     }
 
     throw error;

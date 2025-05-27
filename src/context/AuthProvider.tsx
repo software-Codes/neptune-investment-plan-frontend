@@ -205,9 +205,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
                 toast.success('Successfully logged in');
 
+                // Set auth token
+                setAuthToken(response.data.token);
+
+                // Store user ID in cookie for middleware
+                Cookies.set('user-id', userData.userId, COOKIE_OPTIONS);
+
                 // Handle redirect
                 setTimeout(() => {
-                    const redirectTo = sessionStorage.getItem('redirectTo') || '/pages/user/dashboard';
+                    const redirectTo = sessionStorage.getItem('redirectTo') || `/(user)/${userData.userId}/dashboard`;
                     sessionStorage.removeItem('redirectTo');
                     router.push(redirectTo);
                 }, 100);
