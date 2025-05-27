@@ -5,6 +5,7 @@
 Neptune is a modern, secure, and user-friendly investment platform with comprehensive features for users and administrators, featuring Binance integration and a robust investment ecosystem.
 
 ## 📋 Table of Contents
+
 - [Features](#features)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
@@ -21,6 +22,7 @@ Neptune is a modern, secure, and user-friendly investment platform with comprehe
 ## 🌟 Features
 
 ### User Features
+
 - 🔐 Secure Authentication
 - 💰 Multi-Wallet System
 - 📈 Compound Interest Investments
@@ -29,6 +31,7 @@ Neptune is a modern, secure, and user-friendly investment platform with comprehe
 - 📋 KYC Verification
 
 ### Admin Features
+
 - 🖥️ Comprehensive Dashboard
 - 📊 Real-time Transaction Monitoring
 - 👥 User Management
@@ -229,6 +232,7 @@ src/
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js (v18+)
 - npm or yarn
 - Backend API running
@@ -255,6 +259,7 @@ npm run dev
 ## 🔐 Authentication Flow
 
 ### User Registration
+
 1. User fills registration form
 2. Submit email/phone
 3. OTP verification
@@ -267,11 +272,12 @@ interface RegistrationData {
   email: string;
   phoneNumber: string;
   password: string;
-  otpPreference: 'email' | 'sms';
+  otpPreference: "email" | "sms";
 }
 ```
 
 ### Login Process
+
 1. Enter credentials
 2. Validate credentials
 3. Receive JWT tokens
@@ -280,6 +286,7 @@ interface RegistrationData {
 ## 💰 Investment Process
 
 ### Deposit Workflow
+
 1. Copy admin USDT address
 2. Send USDT transaction
 3. Submit transaction hash
@@ -287,6 +294,7 @@ interface RegistrationData {
 5. Funds credited to account wallet
 
 ### Investment Steps
+
 1. Transfer funds to trading wallet
 2. Start investment (min $10)
 3. Earn 0.25% daily compound interest
@@ -296,12 +304,14 @@ interface RegistrationData {
 ## 🖥️ Pages and Components
 
 ### Authentication Pages
+
 - Login
 - Register
 - OTP Verification
 - KYC Upload
 
 ### User Dashboard
+
 - Wallet Overview
 - Deposit Funds
 - Start Investment
@@ -309,6 +319,7 @@ interface RegistrationData {
 - Referral Program
 
 ### Admin Dashboard
+
 - Transaction Monitoring
 - User Management
 - Withdrawal Approvals
@@ -317,6 +328,7 @@ interface RegistrationData {
 ## 🔗 API Integration
 
 ### Key API Endpoints
+
 - `/api/auth/login`
 - `/api/deposit/submit`
 - `/api/investment/start`
@@ -327,8 +339,8 @@ interface RegistrationData {
 function useDeposit() {
   const submitDeposit = async (transactionHash: string) => {
     try {
-      const response = await axios.post('/api/deposit/submit', { 
-        transactionHash 
+      const response = await axios.post("/api/deposit/submit", {
+        transactionHash,
       });
       return response.data;
     } catch (error) {
@@ -351,11 +363,13 @@ function useDeposit() {
 ## 🚢 Deployment
 
 ### Recommended Platforms
+
 - Vercel
 - Netlify
 - AWS Amplify
 
 ### Deployment Steps
+
 ```bash
 # Build for production
 npm run build
@@ -379,9 +393,207 @@ MIT License
 ## 📞 Support
 
 For support, contact:
+
 - Email: support@neptuneinvestments.com
 - Discord: [Support Channel]
 
+
+## 🎯 Homepage Design & Features
+
+### Hero Section Components
+- Dynamic Trading View Widget Integration
+- Real-time Market Data Display
+- Interactive Investment Calculator
+- Animated Feature Showcases
+
+### Performance Optimization Algorithms
+1. **Lazy Loading Algorithm**
+   ```typescript
+   // Benefits: Improved initial load time, reduced bandwidth
+   // Complexity: O(n) where n is number of components
+   const lazyLoadComponent = {
+     threshold: 0.5,
+     rootMargin: '50px',
+     triggerOnce: true
+   }
+   ```
+
+2. **Real-time Data Processing**
+   ```typescript
+   // Benefits: Efficient updates, minimal re-renders
+   // Complexity: O(log n) for price updates
+   const priceUpdateAlgorithm = {
+     debounceTime: 500,
+     batchSize: 10
+   }
+   ```
+
+3. **Compound Interest Calculator**
+   ```typescript
+   // Benefits: Accurate investment projections
+   // Complexity: O(1) for single calculations
+   const compoundInterestParams = {
+     dailyRate: 0.0025,
+     minimumInvestment: 10,
+     lockPeriod: 30
+   }
+   ```
+
+### Data Structure Implementations
+
+1. **User Portfolio Management**
+```typescript
+interface Portfolio {
+  wallets: {
+    account: WalletState,
+    trading: WalletState,
+    referral: WalletState
+  },
+  investments: Investment[],
+  transactions: Transaction[]
+}
+// Benefit: O(1) access to wallet states
+```
+
+2. **Transaction History**
+```typescript
+type TransactionTree = {
+  timestamp: number,
+  type: 'deposit' | 'withdrawal' | 'investment',
+  amount: number,
+  children: TransactionTree[]
+}
+// Benefit: O(log n) search for transaction history
+```
+
+### Performance Optimizations
+
+1. **Caching Strategy**
+- Implementation: LRU Cache for API responses
+- Benefit: O(1) access time for frequent data
+- Use Case: Trading view data, wallet balances
+
+2. **State Management**
+- Implementation: Redux with selective updates
+- Benefit: O(1) state access, minimal re-renders
+- Use Case: Real-time price updates
+
+### UI/UX Algorithms
+
+1. **Dynamic Layout Algorithm**
+```typescript
+interface LayoutConfig {
+  breakpoints: number[],
+  columns: number[],
+  spacing: number[]
+}
+// Benefit: Responsive design with O(1) calculation
+```
+
+2. **Animation Performance**
+```typescript
+interface AnimationConfig {
+  threshold: number,
+  rootMargin: string,
+  triggerOnce: boolean
+}
+// Benefit: Optimized animation triggers
+```
+
+### Security Implementations
+
+1. **Rate Limiting**
+```typescript
+interface RateLimitConfig {
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+}
+// Benefit: O(1) request validation
+```
+
+2. **JWT Validation**
+```typescript
+interface JWTConfig {
+  expiresIn: '15m',
+  refreshIn: '7d',
+  algorithm: 'HS256'
+}
+// Benefit: Secure authentication with minimal overhead
+```
+
+### Footer Organization
+
+1. **Company Information**
+   - About Neptune
+   - Mission & Vision
+   - Team
+   - Careers
+
+2. **Legal Documentation**
+   - Terms of Service
+   - Privacy Policy
+   - KYC Policy
+   - Risk Disclosure
+
+3. **Support Resources**
+   - Help Center
+   - FAQ
+   - Contact
+   - Support Tickets
+
+4. **Community Links**
+   - Social Media
+   - Blog
+   - Newsletter
+   - Community Forum
+
+### Benefits of Implementation
+
+1. **Performance**
+   - Optimized initial load time
+   - Efficient real-time updates
+   - Smooth animations
+   - Responsive design
+
+2. **Security**
+   - Protected routes
+   - Secure data transmission
+   - Rate limiting
+   - Input validation
+
+3. **User Experience**
+   - Intuitive navigation
+   - Real-time feedback
+   - Interactive elements
+   - Mobile responsiveness
+
+4. **Maintainability**
+   - Modular code structure
+   - Clear documentation
+   - Type safety
+   - Testing coverage
+
+### Technical Stack Benefits
+
+1. **Next.js**
+   - Server-side rendering
+   - Optimized routing
+   - Built-in optimization
+
+2. **TypeScript**
+   - Type safety
+   - Better IDE support
+   - Reduced runtime errors
+
+3. **TradingView Integration**
+   - Professional charts
+   - Real-time data
+   - Technical indicators
+
+4. **State Management**
+   - Predictable state updates
+   - Developer tools
+   - Performance optimization
 ---
 
 **Happy Investing with Neptune! 🚀💰**

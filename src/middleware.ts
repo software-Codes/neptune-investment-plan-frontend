@@ -1,38 +1,49 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Define public routes that don't require authentication
 const publicRoutes = [
-  "/pages/auth/login",
-  "/pages/auth/register",
-  "/pages/auth/initiate-recovery",
-  "/pages/auth/complete-recovery",
-  "/pages/auth/otp-verify",
-  "/support",
+  "/auth/login",
+  "/auth/register",
+  "/auth/verify-otp",
+  "/auth/reset-password",
+  "/auth/verify-kyc",
 ];
 
-// Define paths that should be protected (requiring authentication)
+// Define protected routes based on your folder structure
 const protectedRoutes = [
-  "/pages/user/dashboard",
-  "/pages/user/profile",
-  "/pages/user/settings",
-  // Add other protected routes here
+  // User routes
+  "/user/[userId]/dashboard",
+  "/user/[userId]/wallet",
+  "/user/[userId]/investments",
+  "/user/[userId]/deposits",
+  "/user/[userId]/withdrawals",
+  "/user/[userId]/referral",
+
+  // Admin routes
+  "/admin/[adminId]/dashboard",
+  "/admin/[adminId]/users",
+  "/admin/[adminId]/transactions",
+  "/admin/[adminId]/investments",
+  "/admin/[adminId]/analytics",
 ];
 
 // Constants for routes
-const DASHBOARD_ROUTE = "/pages/user/dashboard";
-const LOGIN_ROUTE = "/pages/auth/login";
+const DEFAULT_DASHBOARD = "/user"; // Will be appended with userId
+const LOGIN_ROUTE = "/auth/login";
 const HOME_ROUTE = "/";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
-  // Get token from cookies (more secure than localStorage for auth)
-  const authCookie = request.cookies.get("auth-token");
-  const hasToken = !!authCookie?.value;
-  
-  // Allow access to static assets and API routes without authentication checks
+
+  // Get token and user info from cookies
+  const authToken = request.cookies.get("auth-token");
+  const userId = request.cookies.get("user-id");
+  const userRole = request.cookies.get("user-role");
+
+  const hasToken = !!authToken?.value;
+
+  // Allow access to static assets and API routes
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -42,58 +53,75 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Handle root path ("/")
+  // Handle root path
   if (pathname === "/") {
-    const bypass = request.nextUrl.searchParams.get('bypass');
-    if (bypass === 'true') {
-      return NextResponse.next();
-    }
-    
     if (!hasToken) {
       return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
     }
-    return NextResponse.redirect(new URL(DASHBOARD_ROUTE, request.url));
+
+    // Redirect to appropriate dashboard based on user role
+    const dashboardPath =
+      userRole?.value === "admin"
+        ? `/admin/${userId?.value}/dashboard`
+        : `/user/${userId?.value}/dashboard`;
+
+    return NextResponse.redirect(new URL(dashboardPath, request.url));
   }
+
   // Handle public routes
-  if (publicRoutes.some(route => pathname === route || pathname.startsWith(route))) {
-    // If user is already authenticated and trying to access login/register pages,
-    // redirect them to dashboard
-    if (hasToken && (pathname.includes("/login") || pathname.includes("/register"))) {
-      return NextResponse.redirect(new URL(DASHBOARD_ROUTE, request.url));
+  if (publicRoutes.some((route) => pathname.startsWith(route))) {
+    // Redirect authenticated users away from auth pages
+    if (hasToken && pathname.startsWith("/auth")) {
+      const dashboardPath =
+        userRole?.value === "admin"
+          ? `/admin/${userId?.value}/dashboard`
+          : `/user/${userId?.value}/dashboard`;
+
+      return NextResponse.redirect(new URL(dashboardPath, request.url));
     }
-    
-    // Otherwise, allow access to public routes
     return NextResponse.next();
   }
-  
-  // Handle protected routes - require authentication
-  if (protectedRoutes.some(route => pathname === route || pathname.startsWith(route))) {
+
+  // Handle protected routes
+   if (
+    protectedRoutes.some((route) => {
+      // Convert route pattern to regex to handle dynamic segments
+      const routePattern = route
+        .replace(/\[([^\]]+)\]/g, '([^/]+)') // Replace dynamic segments with capture groups
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape special regex characters
+      return new RegExp(`^${routePattern}$`).test(pathname);
+    })
+  ) {
     if (!hasToken) {
-      // Redirect to login page and store the original URL as a query parameter
+      // Redirect to login with return URL
       const loginUrl = new URL(LOGIN_ROUTE, request.url);
       loginUrl.searchParams.set("redirectTo", pathname);
       return NextResponse.redirect(loginUrl);
     }
-    
-    // Token exists, allow access to protected route
+
+    // Check role-based access
+    if (pathname.startsWith("/admin") && userRole?.value !== "admin") {
+      return NextResponse.redirect(new URL(DEFAULT_DASHBOARD, request.url));
+    }
+
     return NextResponse.next();
   }
-  
-  // For any unmatched routes, redirect to home
+
+  // For unmatched routes, redirect to home
   return NextResponse.redirect(new URL(HOME_ROUTE, request.url));
 }
 
-// Configure which routes should be handled by the middleware
+// Configure middleware matcher
 export const config = {
   matcher: [
     /*
-     * Match all paths except:
-     * - /api routes
-     * - /_next (Next.js internals)
-     * - /_vercel (Vercel internals)
-     * - /static (static files)
-     * - All files in the public folder
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - _next/data (internal Next.js data routes)
+     * - favicon.ico (favicon file)
      */
-    "/((?!api|_next|_vercel|static|.*\\..*).*)",
-  ],
+    '/((?!api|_next/static|_next/image|_next/data|favicon.ico).*)'
+  ]
 };

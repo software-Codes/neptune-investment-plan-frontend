@@ -75,7 +75,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
                 // Show success message with more details
                 toast.success("Registration successful!", {
-                    description: `Verification code sent via ${data.preferred_contact_method}. Please verify your account.`,
+                    description: `Verification code sent via ${user?.preferred_contact_method}. Please verify your account.`,
                     duration: 5000
                 });
 
