@@ -1,6 +1,6 @@
 import React from 'react'
 
-const UserWallets = () => {
+const ReferralLink = () => {
   return (
     <div>
       
@@ -8,4 +8,4 @@ const UserWallets = () => {
   )
 }
 
-export default UserWallets
+export default ReferralLink

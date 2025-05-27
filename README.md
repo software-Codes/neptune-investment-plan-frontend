@@ -596,4 +596,82 @@ interface JWTConfig {
    - Performance optimization
 ---
 
+src/
+├── app/
+│   └── (user)/
+│       └── [userId]/                  # Protected user routes
+│           ├── layout.tsx             # User layout wrapper
+│           │
+│           ├── dashboard/             # User dashboard
+│           │   ├── page.tsx           # Main dashboard view
+│           │   └── components/
+│           │       ├── DashboardHeader.tsx
+│           │       ├── InvestmentOverview.tsx
+│           │       └── WalletSummary.tsx
+│           │
+│           ├── wallet/                # Wallet management
+│           │   ├── page.tsx
+│           │   └── components/
+│           │       ├── WalletBalance.tsx
+│           │       ├── CryptoDeposit.tsx    # For USDT deposits
+│           │       └── WithdrawalRequest.tsx
+│           │
+│           ├── investments/           # Investment management
+│           │   ├── page.tsx           # Investment plans listing
+│           │   ├── [investmentId]/    # Single investment view
+│           │   │   └── page.tsx
+│           │   └── components/
+│           │       ├── InvestmentCard.tsx
+│           │       ├── CompoundingOptions.tsx
+│           │       └── ROICalculator.tsx
+│           │
+│           ├── transactions/          # Combined transactions view
+│           │   ├── page.tsx
+│           │   └── components/
+│           │       ├── TransactionList.tsx
+│           │       ├── TransactionFilters.tsx
+│           │       └── TransactionDetails.tsx
+│           │
+│           └── referral/              # Referral program
+│               ├── page.tsx
+│               └── components/
+│                   ├── ReferralStats.tsx
+│                   └── ReferralLink.tsx
+│
+├── components/
+│   └── user/                         # Shared user components
+│       ├── layout/
+│       │   ├── UserHeader.tsx
+│       │   └── UserSidebar.tsx
+│       │
+│       ├── shared/
+│       │   ├── CryptoInput.tsx       # USDT input component
+│       │   ├── StatusBadge.tsx       # Transaction status
+│       │   └── AmountDisplay.tsx     # Formatted amounts
+│       │
+│       └── modals/
+│           ├── ConfirmTransaction.tsx
+│           └── KYCVerification.tsx
+│
+├── lib/
+│   ├── api/                          # Your existing API setup
+│   │   └── api-client.ts             # Your existing API client
+│   │
+│   └── user/                         # User-specific API calls
+│       ├── wallet-api.ts             # Wallet endpoints
+│       ├── investment-api.ts         # Investment endpoints
+│       └── transaction-api.ts        # Transaction endpoints
+│
+├── hooks/
+│   └── user/
+│       ├── useWallet.ts              # Wallet state & actions
+│       ├── useInvestments.ts         # Investment operations
+│       └── useTransactions.ts        # Transaction handling
+│
+└── types/
+    └── user/
+        ├── api.types.ts              # API response types
+        ├── wallet.types.ts           # Wallet related types
+        └── investment.types.ts       # Investment types
+
 **Happy Investing with Neptune! 🚀💰**
