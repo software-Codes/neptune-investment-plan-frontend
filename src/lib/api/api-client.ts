@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // lib/api-client.ts
+"use client"
 import axios, { AxiosError } from "axios";
 import {
   RegistrationData,
@@ -13,7 +14,8 @@ import {
   KYCDocument,
   APIResponse,
   PasswordResetState,
-} from "@/types/type";
+  ContactMethod,
+} from "@/types/types";
 import Cookies from "js-cookie";
 
 /**
@@ -200,8 +202,27 @@ export const authApi = {
         }
       );
 
+   // Check for verification status in response
+if (
+  response.data?.data?.user &&
+  // only require verification if neither email nor phone is verified
+  !response.data.data.user.email_verified &&
+  !response.data.data.user.phone_verified
+) {
+  const verificationError = new Error("Account requires verification");
+  Object.assign(verificationError, {
+    requiresVerification: true,
+    userId: response.data.data.user.user_id,
+    email,
+    preferredContactMethod:
+      response.data.data.user.preferred_contact_method ?? ContactMethod.EMAIL,
+  });
+  throw verificationError;
+}
+
+
       // Store token in cookies for middleware compatibility
-      if (response.data.data.token) {
+      if (response.data?.data?.token) {
         Cookies.set("auth-token", response.data.data.token, COOKIE_OPTIONS);
       }
 
@@ -209,30 +230,24 @@ export const authApi = {
     } catch (error: any) {
       console.error("Login request failed:", error);
 
-      // Enhanced error messages for login
-      if (
-        error.message.includes("invalid credentials") ||
-        error.message.includes("Invalid email or password")
-      ) {
-        throw new Error(
-          "Invalid email or password. Please check your credentials and try again."
-        );
-      } else if (
-        error.message.includes("not verified") ||
-        error.message.includes("verification required")
-      ) {
-        // Preserve verification data
+      // Check for specific verification error responses from server
+      if (error.response?.data?.message?.includes('not verified') ||
+          error.response?.data?.message?.includes('verification required')) {
         const verificationError = new Error(
-          "Account requires verification. Please check your email or phone for the verification code."
+          "Account requires verification. Please verify your account to continue."
         );
         Object.assign(verificationError, {
           requiresVerification: true,
-          userId: error.userId || error.errorDetails?.userId,
+          user_id: error.response?.data?.user_id || error.response?.data?.user?.user_id,
           email: email,
-          preferredContactMethod:
-            error.errorDetails?.preferredContactMethod || "email",
+          preferredContactMethod: error.response?.data?.preferred_contact_method || "email"
         });
         throw verificationError;
+      }
+
+      // Handle other specific error cases
+      if (error.response?.status === 401) {
+        throw new Error("Invalid email or password. Please check your credentials.");
       }
 
       throw error;
@@ -302,8 +317,8 @@ export const authApi = {
       }
   
       // Store verification data
-      if (response.data?.user?.userId) {
-        sessionStorage.setItem('verificationUserId', response.data.user.userId);
+      if (response.data?.user?.user_id) {
+        sessionStorage.setItem('verificationUserId', response.data.user.user_id);
         sessionStorage.setItem('verificationEmail', userData.email);
         sessionStorage.setItem('preferredContactMethod', userData.preferredContactMethod);
         sessionStorage.setItem('returnUrl', '/pages/user/dashboard');
@@ -334,13 +349,13 @@ export const authApi = {
    * @param {string} userId - User ID
    * @param {string} email - User email (optional)
    * @param {string} method - Contact method (email or phone, default: email)
-   * @returns {Promise} Resend confirmation
+   * @returns {Promise<APIResponse>} Resend confirmation
    */
   resendOTP: async (
     userId: string,
     email?: string,
     method: string = "email"
-  ) => {
+  ): Promise<APIResponse> => {
     try {
       console.log("Resending OTP for user:", userId);
 
@@ -348,7 +363,7 @@ export const authApi = {
         throw new Error("User ID is required to resend verification code.");
       }
 
-      const payload: any = { userId };
+      const payload: any = { user_id: userId };
 
       // Add email if provided for better error recovery
       if (email) {
@@ -357,15 +372,15 @@ export const authApi = {
 
       // Add contact method if different from default
       if (method && method !== "email") {
-        payload.contactMethod = method;
+        payload.contact_method = method;
       }
 
-      const response = await axiosInstance.post(
+      const response = await axiosInstance.post<APIResponse>(
         "/api/v1/auth/resend-verification",
         payload
       );
 
-      return response;
+      return response.data;
     } catch (error: any) {
       console.error("Resend OTP request failed:", error);
 
@@ -397,7 +412,7 @@ export const authApi = {
     userId: string,
     otpCode: string,
     purpose: string = "registration"
-  ) => {
+  ): Promise<VerificationResponse> => {
     try {
       console.log("Verifying OTP:", {
         userId,
@@ -419,21 +434,21 @@ export const authApi = {
         throw new Error("Verification code must contain only numbers.");
       }
 
-      const response = await axiosInstance.post("/api/v1/auth/verify-otp", {
-        userId,
+      const response = await axiosInstance.post<VerificationResponse>("/api/v1/auth/verify-otp", {
+        user_id: userId,
         otpCode,
         purpose,
       });
 
       // Handle successful verification with token and user data
-      if (response.data.token) {
+      if (response.data.data?.token) {
         // Store token in both localStorage and cookies for middleware compatibility
-        localStorage.setItem("token", response.data.token);
-        Cookies.set("auth-token", response.data.token, COOKIE_OPTIONS);
+        localStorage.setItem("token", response.data.data.token);
+        Cookies.set("auth-token", response.data.data.token, COOKIE_OPTIONS);
 
         // Store user data if provided
-        if (response.data.user) {
-          localStorage.setItem("userData", JSON.stringify(response.data.user));
+        if (response.data.data.user) {
+          localStorage.setItem("userData", JSON.stringify(response.data.data.user));
         }
       }
 
@@ -584,7 +599,7 @@ getCurrentUser: async (): Promise<UserProfile> => {
 
     // Transform backend response to match UserProfile interface
     const userProfile: UserProfile = {
-      userId: response.data.user.userId,
+      user_id: response.data.user.userId,
       email: response.data.user.email,
       full_name: response.data.user.fullName,
       phone_number: response.data.user.phoneNumber,
@@ -594,17 +609,25 @@ getCurrentUser: async (): Promise<UserProfile> => {
       phone_verified: response.data.user.phoneVerified,
       created_at: new Date(response.data.user.createdAt),
       last_login_at: response.data.user.lastLogin ? new Date(response.data.user.lastLogin) : undefined,
-      role: response.data.user.accountStatus === 'active' ? 'user' : 'pending',
+      last_login_ip: response.data.user.lastLoginIp,
+      failed_login_attempts: response.data.user.failedLoginAttempts,
       wallets: response.data.wallets.map((wallet: any) => ({
         wallet_id: wallet.wallet_id,
         user_id: wallet.user_id,
-        currency: wallet.currency,
-        balance: wallet.balance,
-        status: wallet.status,
+        wallet_type: wallet.wallet_type,
+        balance: wallet.balance.toString(),
+        locked_balance: wallet.locked_balance?.toString(),
         created_at: new Date(wallet.created_at),
         updated_at: new Date(wallet.updated_at)
       })),
-      accountCompletion: response.data.accountCompletion
+      accountCompletion: {
+        basicVerified: response.data.accountCompletion.basicVerified,
+        documentsSubmitted: response.data.accountCompletion.documentsSubmitted,
+        accountComplete: response.data.accountCompletion.accountComplete,
+        requiredDocuments: response.data.accountCompletion.requiredDocuments,
+        submittedDocuments: response.data.accountCompletion.submittedDocuments,
+        completionPercentage: response.data.accountCompletion.completionPercentage
+      }
     };
 
     return userProfile;

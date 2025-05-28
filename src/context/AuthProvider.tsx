@@ -1,388 +1,396 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/context/AuthProvider.tsx
+// src/providers/AuthProvider.tsx
 "use client"
-
 import React, { createContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthContextType, ContactMethod, KYCDocument, OTPVerificationData, RegistrationData, User, UserProfile, VerificationResponse } from '@/types/type';
+import { 
+  AuthContextType, 
+  ContactMethod, 
+  KYCDocument, 
+  OTPVerificationData, 
+  RegistrationData, 
+  User, 
+  UserProfile, 
+  VerificationState 
+} from '@/types/types';
 import { apiClient, authApi } from '@/lib/api/api-client';
 import { toast } from 'sonner';
-import Cookies from 'js-cookie'; // Add this import
+import Cookies from 'js-cookie';
+import { AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-/**
- * Authentication Context
- * Provides authentication state and methods throughout the application
- */
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }
 
-// Cookie configuration
 const COOKIE_OPTIONS = {
-    expires: 7, // 7 days
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict' as const
+  expires: 7,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const
 };
 
-/**
- * AuthProvider Component
- * Manages authentication state and provides authentication methods to child components
- */
 export function AuthProvider({ children }: AuthProviderProps) {
-    const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isInitialized, setIsInitialized] = useState(false);
-    const [verificationRedirectData, setVerificationRedirectData] = useState<{ userId?: string; email?: string } | null>(null);
-    const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [verificationState, setVerificationState] = useState<VerificationState | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-    /**
-     * Sets authentication token in both localStorage and cookies
-     * for compatibility with client-side and middleware checks
-     */
-    const setAuthToken = (token: string) => {
-        // Store in localStorage for client-side use
-        localStorage.setItem('token', token);
+  const setAuthToken = (token: string) => {
+    localStorage.setItem('token', token);
+    Cookies.set('auth-token', token, COOKIE_OPTIONS);
+  };
 
-        // Store in cookies for middleware (server-side) use
-        Cookies.set('auth-token', token, COOKIE_OPTIONS);
+  const removeAuthToken = () => {
+    localStorage.removeItem('token');
+    Cookies.remove('auth-token');
+  };
+
+  const handleVerificationRedirect = (data: {
+    user_id: string;
+    email: string;
+    method?: ContactMethod;
+    returnUrl?: string;
+  }) => {
+    const newVerificationState: VerificationState = {
+      user_id: data.user_id,
+      email: data.email,
+      method: data.method || ContactMethod.EMAIL,
+      destination: data.email,
+      attempts: 0,
+      returnUrl: data.returnUrl
     };
+    
+    setVerificationState(newVerificationState);
+    sessionStorage.setItem('verificationState', JSON.stringify(newVerificationState));
+    
+    toast.info("Verification required", {
+      description: `Please verify your account via ${data.method || 'email'}`,
+      action: {
+        label: "Verify Now",
+        onClick: () => router.push('/auth/otp-verify')
+      }
+    });
 
-    /**
-     * Removes authentication token from both localStorage and cookies
-     */
-    const removeAuthToken = () => {
-        localStorage.removeItem('token');
-        Cookies.remove('auth-token');
-    };
+    router.push('/auth/otp-verify');
+  };
 
-    /**
-     * Registers a new user
-     */
-    const register = async (data: RegistrationData): Promise<void> => {
-        setIsLoading(true);
-        try {
-            const response = await authApi.register(data);
+  const register = async (data: RegistrationData): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await authApi.register(data);
 
-            // Store user ID for verification page if needed
-            if (response.user && response.user.userId) {
-                setVerificationRedirectData({
-                    userId: response.user.userId,
-                    email: response.user.email
-                });
+      if (response.success && response.user && response.user.user_id) {
+        handleVerificationRedirect({
+          user_id: response.user.user_id,
+          email: response.user.email,
+          method: response.user.preferred_contact_method,
+          returnUrl: `/(user)/${response.user.user_id}/dashboard`
+        });
 
-                // Show success message with more details
-                toast.success("Registration successful!", {
-                    description: `Verification code sent via ${user?.preferred_contact_method}. Please verify your account.`,
-                    duration: 5000
-                });
-
-                // Redirect to verification page
-                router.push('/pages/auth/otp-verify');
-            } else {
-                toast.success('Registration successful!', {
-                    description: 'Please check your email or phone for verification.',
-                    duration: 5000
-                });
-                router.push('/pages/auth/otp-verify');
-            }
-        } catch (error: any) {
-            console.error('Registration error:', error);
-
-            // Improved error messaging
-            const errorMessage = getReadableErrorMessage(error);
-            toast.error("Registration failed", {
-                description: errorMessage,
-                duration: 4000
-            });
-            throw error;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    /**
-     * Checks if the user is authenticated by verifying token exists and validates it
-     */
-    const checkAuth = async () => {
-        try {
-            // First validate the token with the server
-            const isValid = await authApi.validateToken();
-            if (!isValid) {
-                handleLogout();
-                return false;
-            }
-
-            // If token is valid, fetch current user data
-            const userData = await authApi.getCurrentUser();
-
-            if (userData) {
-                setUser({
-                    userId: userData.userId,
-                    email: userData.email,
-                    full_name: userData.full_name,
-                    phone_number: userData.phone_number,
-                    preferred_contact_method: userData.preferred_contact_method,
-                    account_status: userData.account_status,
-                    email_verified: userData.email_verified,
-                    phone_verified: userData.phone_verified,
-                    created_at: userData.created_at,
-                    updated_at: userData.updated_at,
-                    role: userData.account_status === 'active' ? 'user' : 'pending',
-                });
-                // Store user data in localStorage for persistence
-                localStorage.setItem('userData', JSON.stringify(userData));
-
-                return true;
-            }
-
-            return false;
-        } catch (error) {
-            console.error('Auth check failed:', error);
-            handleLogout();
-            return false;
-        }
-    };
-
-
-    /**
-     * Handles the logout cleanup
-     */
-    const handleLogout = () => {
-        removeAuthToken();
-        localStorage.removeItem('userData');
-        setUser(null);
-    };
-
-    const login = async (email: string, password: string) => {
-        setIsLoading(true);
-        try {
-            const response = await authApi.login(email, password);
-
-            if (response.data.token) {
-                // Get user data from the response
-                const userData = response.data.user;
-
-                // Check if user needs verification
-                if (userData && (!userData.email_verified && !userData.phone_verified)) {
-                    const verificationData = {
-                        userId: userData.userId,
-                        email: userData.email || email
-                    };
-
-                    setVerificationRedirectData(verificationData);
-
-                    // Store verification data
-                    sessionStorage.setItem("verificationUserId", userData.userId);
-                    sessionStorage.setItem("verificationEmail", userData.email || email);
-                    sessionStorage.setItem("preferredContactMethod", userData.preferred_contact_method || "email");
-                    sessionStorage.setItem("returnUrl", "/dashboard");
-
-                    toast.info("Account verification required");
-                    router.push('/pages/auth/otp-verify');
-                    return;
-                }
-
-                // Set user state with correct data structure
-                setUser({
-                    userId: userData.userId,
-                    email: userData.email,
-                    full_name: userData.full_name,
-                    phone_number: userData.phone_number,
-                    preferred_contact_method: userData.preferred_contact_method,
-                    account_status: userData.account_status,
-                    email_verified: userData.email_verified,
-                    phone_verified: userData.phone_verified,
-                    created_at: new Date(userData.created_at),
-                    last_login_at: userData.last_login_at ? new Date(userData.last_login_at) : undefined,
-                    role: userData.account_status === 'active' ? 'user' : 'pending'
-                });
-
-                // Update local storage
-                localStorage.setItem('userData', JSON.stringify(userData));
-
-                toast.success('Successfully logged in');
-
-                // Set auth token
-                setAuthToken(response.data.token);
-
-                // Store user ID in cookie for middleware
-                Cookies.set('user-id', userData.userId, COOKIE_OPTIONS);
-
-                // Handle redirect
-                setTimeout(() => {
-                    const redirectTo = sessionStorage.getItem('redirectTo') || `/(user)/${userData.userId}/dashboard`;
-                    sessionStorage.removeItem('redirectTo');
-                    router.push(redirectTo);
-                }, 100);
-            }
-        } catch (error: any) {
-            console.error('Login error:', error);
-
-            // Handle verification required case
-            if (error.requiresVerification && error.userId) {
-                setVerificationRedirectData({
-                    userId: error.userId,
-                    email: email
-                });
-
-                sessionStorage.setItem("verificationUserId", error.userId);
-                sessionStorage.setItem("verificationEmail", email);
-                sessionStorage.setItem("preferredContactMethod", error.preferredContactMethod || "email");
-                sessionStorage.setItem("returnUrl", "/dashboard");
-
-                toast.info("Account verification required");
-                router.push('/pages/auth/otp-verify');
-                return;
-            }
-
-            const errorMessage = getReadableErrorMessage(error);
-            toast.error("Login failed", {
-                description: errorMessage
-            });
-            throw error;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    /**
-     * Logs out the current user
-     */
-    const logout = async () => {
-        setIsLoading(true);
-        try {
-            await authApi.logout();
-            toast.success('Successfully logged out');
-        } catch (error) {
-            console.error('Logout error:', error);
-            toast.error("Logout failed locally");
-        } finally {
-            handleLogout();
-            router.push('/login');
-            setIsLoading(false);
-        }
-    };
-
-    /**
-     * Formats error messages to be more user-friendly
-     */
-    const getReadableErrorMessage = (error: any): string => {
-        const message = error.message || 'An unknown error occurred';
-
-        // Transform specific server messages
-        const errorMappings: Record<string, string> = {
-            'User already exists': 'An account with this email already exists. Please sign in instead.',
-            'invalid credentials': 'The email or password you entered is incorrect. Please try again.',
-            'Invalid email or password': 'The email or password you entered is incorrect. Please try again.',
-            'not verified': 'Your account needs verification. Please check your email or phone for the verification code.',
-            'Account is not verified': 'Your account needs verification. Please check your email or phone for the verification code.',
-            'User not found': 'No account found with this email address. Please check your email or sign up for a new account.'
-        };
-
-        // Check for specific error patterns
-        for (const [pattern, userMessage] of Object.entries(errorMappings)) {
-            if (message.toLowerCase().includes(pattern.toLowerCase())) {
-                return userMessage;
-            }
-        }
-
-        // Handle network and server errors
-        if (message.includes('no internet') || message.includes('connect')) {
-            return 'Unable to connect to the server. Please check your internet connection and try again.';
-        }
-
-        if (message.includes('timeout')) {
-            return 'The server is taking too long to respond. Please try again in a moment.';
-        }
-
-        if (message.includes('500') || message.includes('server error')) {
-            return 'The server is experiencing issues. Please try again later.';
-        }
-
-        return message;
-    };
-
-    // Initialize authentication state
-    useEffect(() => {
-        const initializeAuth = async () => {
-            try {
-                await checkAuth();
-            } catch (error) {
-                console.error('Auth initialization error:', error);
-            } finally {
-                setIsLoading(false);
-                setIsInitialized(true);
-            }
-        };
-
-        initializeAuth();
-
-        // Store redirectTo from URL params if present
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirectParam = urlParams.get('redirectTo');
-        if (redirectParam) {
-            sessionStorage.setItem('redirectTo', redirectParam);
-        }
-    }, []);
-
-    // Context value with all authentication methods and state
-    const contextValue: AuthContextType = {
-        user,
-        isLoading,
-        login,
-        logout,
-        checkAuth,
-        register,
-        verificationData: verificationRedirectData,
-        logoutAllDevices: function (): Promise<void> {
-            throw new Error('Function not implemented.');
-        },
-        verifyOTP: function (data: OTPVerificationData): Promise<void> {
-            throw new Error('Function not implemented.');
-        },
-        resendOTP: function (userId: string, method?: ContactMethod): Promise<void> {
-            throw new Error('Function not implemented.');
-        },
-        initiatePasswordReset: function (email: string): Promise<void> {
-            throw new Error('Function not implemented.');
-        },
-        completePasswordReset: function (userId: string, otpCode: string, newPassword: string): Promise<void> {
-            throw new Error('Function not implemented.');
-        },
-        getCurrentUser: function (): Promise<UserProfile> {
-            throw new Error('Function not implemented.');
-        },
-        uploadDocument: function (file: File, documentType: string, documentCountry: string): Promise<void> {
-            throw new Error('Function not implemented.');
-        },
-        getDocumentStatus: function (documentId: string): Promise<KYCDocument> {
-            throw new Error('Function not implemented.');
-        },
-        getUserDocuments: function (): Promise<KYCDocument[]> {
-            throw new Error('Function not implemented.');
-        }
-    };
-
-    if (!isInitialized) {
-        return (
-            <div className="flex h-screen w-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-                <div className="text-center space-y-4">
-                    <div className="relative">
-                        <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent mx-auto"></div>
-                        <div className="absolute inset-0 h-12 w-12 rounded-full bg-emerald-500/10 animate-pulse mx-auto"></div>
-                    </div>
-                    <p className="text-emerald-700 text-lg font-medium">Loading...</p>
-                </div>
-            </div>
-        );
+        toast.success("Registration successful!", {
+          description: `Verification code sent via ${response.user.preferred_contact_method}`,
+          duration: 5000,
+          action: {
+            label: "Verify Now",
+            onClick: () => router.push('/auth/otp-verify')
+          }
+        });
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message;
+      setError(errorMessage);
+      toast.error("Registration failed", { 
+        description: errorMessage,
+        duration: 5000
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
+  };
 
+  const login = async (email: string, password: string): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await authApi.login(email, password);
+
+      if (!response.success || !response.data?.user) {
+        throw new Error("Invalid response from server");
+      }
+
+      const userData = response.data.user;
+
+      // Check if either email or phone is verified
+      if (!userData.email_verified && !userData.phone_verified) {
+        handleVerificationRedirect({
+          user_id: userData.user_id,
+          email: userData.email,
+          method: userData.preferred_contact_method,
+          returnUrl: `/(user)/${userData.user_id}/dashboard`
+        });
+        return;
+      }
+
+      setAuthToken(response.data.token);
+      setUser(userData);
+      
+      toast.success("Login Successful", {
+        description: "Welcome back!",
+        icon: <CheckCircle2 className="h-4 w-4 text-green-500" />
+      });
+
+      const redirectTo = sessionStorage.getItem('redirectTo') || 
+                        `/(user)/${userData.user_id}/dashboard`;
+      sessionStorage.removeItem('redirectTo');
+      router.push(redirectTo);
+
+    } catch (error: any) {
+      if (error.requiresVerification) {
+        handleVerificationRedirect({
+          user_id: error.user_id,
+          email: error.email,
+          method: error.preferred_contact_method,
+          returnUrl: '/dashboard'
+        });
+        return;
+      }
+
+      const errorMessage = error.response?.data?.message || error.message;
+      setError(errorMessage);
+      toast.error("Login Failed", {
+        description: errorMessage,
+        icon: <XCircle className="h-4 w-4 text-red-500" />
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verifyOTP = async (data: OTPVerificationData): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await authApi.verifyOTP(
+        data.userId,
+        data.otpCode,
+        data.purpose
+      );
+
+      if (response.success && response.data?.token && response.data?.user) {
+        setAuthToken(response.data.token);
+        setUser(response.data.user);
+        setVerificationState(null);
+        sessionStorage.removeItem('verificationState');
+
+        toast.success("Verification Successful", {
+          description: "Your account has been verified successfully!",
+          icon: <CheckCircle2 className="h-4 w-4 text-green-500" />
+        });
+        
+        const returnUrl = verificationState?.returnUrl || `/(user)/${response.data.user.user_id}/dashboard`;
+        router.push(returnUrl);
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message;
+      setError(errorMessage);
+      toast.error("Verification Failed", {
+        description: errorMessage,
+        icon: <XCircle className="h-4 w-4 text-red-500" />
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resendOTP = async (userId: string, method?: ContactMethod): Promise<void> => {
+    try {
+      // Check for rate limiting
+      const lastAttempt = verificationState?.lastAttempt;
+      if (lastAttempt) {
+        const timeSinceLastAttempt = Date.now() - new Date(lastAttempt).getTime();
+        if (timeSinceLastAttempt < 60000) { // 1 minute cooldown
+          toast.error("Please wait", {
+            description: "You can request a new code in 1 minute",
+            icon: <AlertCircle className="h-4 w-4 text-amber-500" />
+          });
+          return;
+        }
+      }
+
+      await authApi.resendOTP(userId, verificationState?.email, method);
+      
+      if (verificationState) {
+        const updatedState = {
+          ...verificationState,
+          attempts: (verificationState.attempts || 0) + 1,
+          lastAttempt: new Date()
+        };
+        setVerificationState(updatedState);
+        sessionStorage.setItem('verificationState', JSON.stringify(updatedState));
+      }
+
+      toast.success("Code Resent", {
+        description: "Please check your email/phone for the new code",
+        icon: <CheckCircle2 className="h-4 w-4 text-green-500" />
+      });
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message;
+      toast.error("Failed to resend code", {
+        description: errorMessage,
+        icon: <XCircle className="h-4 w-4 text-red-500" />
+      });
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    setIsLoading(true);
+    try {
+      await authApi.logout();
+      handleLogout();
+      router.push('/login');
+      toast.success('Successfully logged out');
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      handleLogout(); // Still clear local state
+      toast.error("Logout failed", {
+        description: error.message
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logoutAllDevices = async (): Promise<void> => {
+    try {
+      await authApi.logoutAllDevices();
+      handleLogout();
+      router.push('/login');
+      toast.success('Logged out from all devices');
+    } catch (error: any) {
+      toast.error("Failed to logout from all devices", {
+        description: error.message
+      });
+      throw error;
+    }
+  };
+
+  const getCurrentUser = async (): Promise<UserProfile> => {
+    try {
+      const userProfile = await authApi.getCurrentUser();
+      setUser(userProfile);
+      return userProfile;
+    } catch (error: any) {
+      handleLogout();
+      throw error;
+    }
+  };
+
+  const checkVerificationStatus = async () => {
+    try {
+      const user = await getCurrentUser();
+      return {
+        email: user.email_verified,
+        phone: user.phone_verified,
+        required: !user.email_verified && !user.phone_verified
+      };
+    } catch (error) {
+      return {
+        email: false,
+        phone: false,
+        required: true
+      };
+    }
+  };
+
+  const handleLogout = () => {
+    removeAuthToken();
+    localStorage.removeItem('userData');
+    setUser(null);
+    setVerificationState(null);
+    sessionStorage.removeItem('verificationState');
+  };
+
+  // Initialize authentication state
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const isValid = await authApi.validateToken();
+        if (isValid) {
+          await getCurrentUser();
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        handleLogout();
+      } finally {
+        setIsLoading(false);
+        setIsInitialized(true);
+      }
+    };
+
+    initializeAuth();
+  }, []);
+
+  const contextValue: AuthContextType = {
+    user,
+    isLoading,
+    login,
+    logout,
+    register,
+    verifyOTP,
+    resendOTP,
+    logoutAllDevices,
+    getCurrentUser,
+    checkAuth: authApi.validateToken,
+    verificationState,
+    setVerificationState,
+    handleVerificationRedirect,
+    checkVerificationStatus,
+    uploadDocument: authApi.uploadDocument,
+    getDocumentStatus: authApi.getDocumentStatus,
+    getUserDocuments: authApi.getUserDocuments,
+    verificationData: null,
+    initiatePasswordReset: async (email: string): Promise<void> => {
+      await authApi.requestPasswordReset(email);
+    },
+    completePasswordReset: async (userId: string, otpCode: string, newPassword: string): Promise<void> => {
+      await authApi.completePasswordReset(userId, otpCode, newPassword);
+    },
+  };
+
+  if (!isInitialized) {
     return (
-        <AuthContext.Provider value={contextValue}>
-            {children}
-        </AuthContext.Provider>
+      <div className="flex h-screen w-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+        <div className="text-center space-y-4">
+          <div className="relative">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent mx-auto" />
+            <div className="absolute inset-0 h-12 w-12 rounded-full bg-emerald-500/10 animate-pulse mx-auto" />
+          </div>
+          <p className="text-emerald-700 text-lg font-medium">Loading...</p>
+        </div>
+      </div>
     );
+  }
+
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {error && (
+        <Alert variant="destructive" className="fixed top-4 right-4 w-96 z-50">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {children}
+    </AuthContext.Provider>
+  );
 }
