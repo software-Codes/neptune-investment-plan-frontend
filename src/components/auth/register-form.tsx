@@ -185,7 +185,7 @@ export function RegisterForm() {
                   <Input
                     {...field}
                     placeholder="John Doe"
-                    className="h-11 border-emerald-200 focus:border-emerald-400 focus:ring-emerald-200"
+                    className="h-11 text-black border-emerald-200 focus:border-emerald-400 focus:ring-emerald-200"
                     disabled={isLoading}
                   />
                 </FormControl>
@@ -231,7 +231,7 @@ export function RegisterForm() {
                     {...field}
                     type="tel"
                     placeholder="+1234567890"
-                    className="h-11 border-emerald-200 focus:border-emerald-400 focus:ring-emerald-200"
+                    className="h-11 text-black border-emerald-200 focus:border-emerald-400 focus:ring-emerald-200"
                     disabled={isLoading}
                   />
                 </FormControl>

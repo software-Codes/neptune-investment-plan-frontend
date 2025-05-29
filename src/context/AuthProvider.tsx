@@ -3,17 +3,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/providers/AuthProvider.tsx
 "use client"
-import React, { createContext, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
-  AuthContextType, 
-  ContactMethod, 
-  KYCDocument, 
-  OTPVerificationData, 
-  RegistrationData, 
-  User, 
-  UserProfile, 
-  VerificationState 
+import React, { createContext, useEffect, useState, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import {
+  AuthContextType,
+  ContactMethod,
+  KYCDocument,
+  OTPVerificationData,
+  RegistrationData,
+  User,
+  UserProfile,
+  VerificationState
 } from '@/types/types';
 import { apiClient, authApi } from '@/lib/api/api-client';
 import { toast } from 'sonner';
@@ -40,6 +40,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [verificationState, setVerificationState] = useState<VerificationState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
+  const loginAttempted = useRef(false);
 
   const setAuthToken = (token: string) => {
     localStorage.setItem('token', token);
@@ -65,10 +67,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       attempts: 0,
       returnUrl: data.returnUrl
     };
-    
+
     setVerificationState(newVerificationState);
     sessionStorage.setItem('verificationState', JSON.stringify(newVerificationState));
-    
+
     toast.info("Verification required", {
       description: `Please verify your account via ${data.method || 'email'}`,
       action: {
@@ -106,7 +108,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message;
       setError(errorMessage);
-      toast.error("Registration failed", { 
+      toast.error("Registration failed", {
         description: errorMessage,
         duration: 5000
       });
@@ -116,9 +118,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const login = async (email: string, password: string): Promise<void> => {
+ const login = async (email: string, password: string): Promise<void> => {
+    if (loginAttempted.current) return;
+    loginAttempted.current = true;
     setIsLoading(true);
     setError(null);
+
     try {
       const response = await authApi.login(email, password);
 
@@ -128,48 +133,57 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const userData = response.data.user;
 
-      // Check if either email or phone is verified
+      // 1) Unverified users → OTP flow
       if (!userData.email_verified && !userData.phone_verified) {
-        handleVerificationRedirect({
+        loginAttempted.current = false;
+        return handleVerificationRedirect({
           user_id: userData.user_id,
           email: userData.email,
           method: userData.preferred_contact_method,
-          returnUrl: `/(user)/${userData.user_id}/dashboard`
+          // **no (user) group**, just /<userId>/dashboard
+          returnUrl: `/${userData.user_id}/dashboard`,
         });
-        return;
       }
 
+      // 2) Persist token + userId cookie
       setAuthToken(response.data.token);
+      Cookies.set("user-id", userData.user_id, COOKIE_OPTIONS);
+
+      // 3) Set user & short-circuit the init effect
       setUser(userData);
-      
+      setIsInitialized(true);
+
       toast.success("Login Successful", {
         description: "Welcome back!",
-        icon: <CheckCircle2 className="h-4 w-4 text-green-500" />
+        icon: <CheckCircle2 className="h-4 w-4 text-green-500" />,
       });
 
-      const redirectTo = sessionStorage.getItem('redirectTo') || 
-                        `/(user)/${userData.user_id}/dashboard`;
-      sessionStorage.removeItem('redirectTo');
-      router.push(redirectTo);
+      // 4) Redirect to either the stored path or to /<userId>/dashboard
+      const raw = sessionStorage.getItem("redirectTo");
+      const redirectTo = raw ? raw : `/${userData.user_id}/dashboard`;
+      sessionStorage.removeItem("redirectTo");
 
-    } catch (error: any) {
-      if (error.requiresVerification) {
-        handleVerificationRedirect({
-          user_id: error.user_id,
-          email: error.email,
-          method: error.preferred_contact_method,
-          returnUrl: '/dashboard'
+      router.replace(redirectTo);
+    } catch (err: any) {
+      loginAttempted.current = false;
+
+      // If the API signaled `requiresVerification`, kick into that flow
+      if (err.requiresVerification) {
+        return handleVerificationRedirect({
+          user_id: err.userId,
+          email: err.email,
+          method: err.preferredContactMethod,
+          returnUrl: `/${err.userId}/dashboard`,
         });
-        return;
       }
 
-      const errorMessage = error.response?.data?.message || error.message;
-      setError(errorMessage);
+      const msg = err.response?.data?.message || err.message;
+      setError(msg);
       toast.error("Login Failed", {
-        description: errorMessage,
-        icon: <XCircle className="h-4 w-4 text-red-500" />
+        description: msg,
+        icon: <XCircle className="h-4 w-4 text-red-500" />,
       });
-      throw error;
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -195,9 +209,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           description: "Your account has been verified successfully!",
           icon: <CheckCircle2 className="h-4 w-4 text-green-500" />
         });
-        
+
         const returnUrl = verificationState?.returnUrl || `/(user)/${response.data.user.user_id}/dashboard`;
-        router.push(returnUrl);
+        router.replace(returnUrl);
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message;
@@ -228,7 +242,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       await authApi.resendOTP(userId, verificationState?.email, method);
-      
+
       if (verificationState) {
         const updatedState = {
           ...verificationState,
@@ -258,7 +272,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await authApi.logout();
       handleLogout();
-      router.push('/login');
+      router.replace('/auth/login');
       toast.success('Successfully logged out');
     } catch (error: any) {
       console.error('Logout error:', error);
@@ -275,7 +289,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await authApi.logoutAllDevices();
       handleLogout();
-      router.push('/login');
+      router.replace('/auth/login');
       toast.success('Logged out from all devices');
     } catch (error: any) {
       toast.error("Failed to logout from all devices", {
@@ -319,15 +333,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null);
     setVerificationState(null);
     sessionStorage.removeItem('verificationState');
+    loginAttempted.current = false;
   };
 
-  // Initialize authentication state
+  // Initialize authentication state - IMPROVED
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        const token = localStorage.getItem('token') || Cookies.get('auth-token');
+        if (!token) {
+          setIsLoading(false);
+          setIsInitialized(true);
+          return;
+        }
+
         const isValid = await authApi.validateToken();
         if (isValid) {
-          await getCurrentUser();
+          // await getCurrentUser();
+        } else {
+          handleLogout();
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -338,8 +362,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     };
 
-    initializeAuth();
-  }, []);
+    if (!isInitialized) {
+      initializeAuth();
+    }
+  }, [isInitialized]);
 
   const contextValue: AuthContextType = {
     user,

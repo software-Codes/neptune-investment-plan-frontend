@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LoginForm } from "@/components/auth/login-form"
 import { useAuth } from "@/hooks/useAuth"
@@ -27,6 +27,7 @@ export default function LoginPage() {
   const [redirecting, setRedirecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showWelcomeBack, setShowWelcomeBack] = useState(false)
+  const redirectAttempted = useRef(false)
 
   // Capture redirectTo & handle verify status
   useEffect(() => {
@@ -56,20 +57,29 @@ export default function LoginPage() {
     }
   }, [searchParams])
 
-  // If already authenticated and verified, redirect
+  // If already authenticated and verified, redirect - FIXED
   useEffect(() => {
-    if (user) {
+    if (user && !redirectAttempted.current) {
+      redirectAttempted.current = true
       setRedirecting(true)
-      checkVerificationStatus().then((st) => {
-        if (!st.required) {
-          const to = sessionStorage.getItem("redirectTo") || `/(user)/${user.user_id}/dashboard`
+      
+      checkVerificationStatus().then((status) => {
+        if (!status.required) {
+          const redirectTo = sessionStorage.getItem("redirectTo") || `/(user)/${user.user_id}/dashboard`
           sessionStorage.removeItem("redirectTo")
-          router.push(to)
+          
+          // Add a small delay to prevent rapid redirects
+          setTimeout(() => {
+            router.push(redirectTo)
+          }, 100)
         } else {
           setRedirecting(false)
+          redirectAttempted.current = false
         }
-      }).catch(() => {
+      }).catch((error) => {
+        console.error("Verification status check failed:", error)
         setRedirecting(false)
+        redirectAttempted.current = false
       })
     }
   }, [user, checkVerificationStatus, router])
@@ -87,7 +97,7 @@ export default function LoginPage() {
     
     try {
       await login(email, password)
-      // On success, the user effect will handle redirection
+      // The useEffect will handle the redirect after login
     } catch (err: any) {
       setRedirecting(false)
       
@@ -110,6 +120,10 @@ export default function LoginPage() {
         })
       } else {
         setError(err.message || "Login failed")
+        toast.error("Login Failed", {
+          description: err.message || "Login failed",
+          duration: 4000
+        })
       }
     }
   }
@@ -128,6 +142,7 @@ export default function LoginPage() {
     })
   }
 
+  // Show loading state while redirecting
   if (redirecting) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50">
