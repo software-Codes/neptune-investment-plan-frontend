@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 const publicRoutes = [
   "/auth/login",
   "/auth/register",
-  "/auth/verify-otp",
+  "/auth/otp-verify",
   "/auth/reset-password",
   "/auth/verify-kyc",
   "/auth/complete-recovery"

@@ -92,30 +92,36 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
         await onSubmit(data)
       }
     } catch (error: any) {
-      console.error('Login error details:', error);
+      console.error('Login error details:', error)
 
       // Check if the error is due to verification requirement
-      if (error.requiresVerification && error.userId) {
+      if (error.requiresVerification && (error.userId || error.user_id)) {
         setShowVerificationAlert(true)
         setUserData({ 
-          userId: error.userId, 
+          userId: error.userId || error.user_id, 
           email: data.email,
-          method: error.preferredContactMethod || 'email'
+          method: error.preferredContactMethod || error.preferred_contact_method || 'email'
         })
         setError(null) // Clear generic error since we're showing verification alert
 
-        toast.error("Account Verification Required", {
-          description: "Please verify your account to continue",
-          duration: 5000,
-          action: {
-            label: "Verify Now",
-            onClick: () => onVerificationRequired?.(error.userId)
+        // Optional: Add console.log to debug
+        console.log('Setting verification alert:', {
+          showVerificationAlert: true,
+          userData: {
+            userId: error.userId || error.user_id,
+            email: data.email,
+            method: error.preferredContactMethod || error.preferred_contact_method || 'email'
           }
         })
+
+        if (onVerificationRequired) {
+          onVerificationRequired(error.userId || error.user_id)
+        }
       } else {
         const message = error.message || "Something went wrong"
         setError(message)
         setShowVerificationAlert(false)
+        setUserData(null)  // Ensure userData is cleared for non-verification errors
 
         toast.error("Login failed", {
           description: message,
