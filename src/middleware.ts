@@ -35,17 +35,26 @@ export function middleware(request: NextRequest) {
   ) {
     return NextResponse.next();
   }
-
-  // 2. Root path
-  if (pathname === HOME_ROUTE) {
-    if (!authToken) {
-      return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
-    }
-    if (userId) {
-      return NextResponse.redirect(new URL(`/${userId}/dashboard`, request.url));
-    }
+//root path
+if (pathname === HOME_ROUTE) {
+  if (!authToken) {
     return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
   }
+  
+  // If coming from dashboard, allow access to home
+  if (request.nextUrl.searchParams.get('from') === 'dashboard') {
+    return NextResponse.next();
+  }
+
+  // If user has ID but not coming from dashboard, redirect to dashboard
+  if (userId) {
+    const dashboardUrl = new URL(`/${userId}/dashboard`, request.url);
+    return NextResponse.redirect(dashboardUrl);
+  }
+
+  // Fallback to login if something is wrong
+  return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
+}
 
   // 3. Public routes
   if (publicRoutes.some((r) => pathname.startsWith(r))) {

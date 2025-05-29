@@ -8,11 +8,11 @@ import { LoginForm } from "@/components/auth/login-form"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "sonner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { 
-  AlertCircle, 
-  ArrowLeft, 
-  Loader2, 
-  CheckCircle2, 
+import {
+  AlertCircle,
+  ArrowLeft,
+  Loader2,
+  CheckCircle2,
   XCircle,
   Shield,
   Sparkles
@@ -29,28 +29,24 @@ export default function LoginPage() {
   const [showWelcomeBack, setShowWelcomeBack] = useState(false)
   const redirectAttempted = useRef(false)
 
-  // Capture redirectTo & handle verify status
+  // preserve redirectTo & show toast on verification success/failure
   useEffect(() => {
     const to = searchParams.get("redirectTo")
     if (to) sessionStorage.setItem("redirectTo", to)
 
     const status = searchParams.get("status")
     const msg = searchParams.get("message")
-    
     if (status === "verified") {
       setShowWelcomeBack(true)
-      toast.success(msg || "Account Verified Successfully!", { 
-        description: "You can now sign in to your account.",
-        duration: 6000,
+      toast.success(msg || "Account Verified!", {
+        description: "You can now sign in.",
         icon: <CheckCircle2 className="h-4 w-4 text-green-500" />
       })
       clearParams()
     }
-    
     if (status === "verification-failed") {
       toast.error(msg || "Verification Failed", {
-        description: "Please try again or request a new verification code.",
-        duration: 5000,
+        description: "Please try again.",
         icon: <XCircle className="h-4 w-4 text-red-500" />
       })
       clearParams()
@@ -58,29 +54,26 @@ export default function LoginPage() {
   }, [searchParams])
 
   // If already authenticated and verified, redirect - FIXED
+  // if already logged-in and verified, redirect to dashboard
   useEffect(() => {
     if (user && !redirectAttempted.current) {
       redirectAttempted.current = true
       setRedirecting(true)
-      
-      checkVerificationStatus().then((status) => {
-        if (!status.required) {
-          const redirectTo = sessionStorage.getItem("redirectTo") || `/(user)/${user.user_id}/dashboard`
-          sessionStorage.removeItem("redirectTo")
-          
-          // Add a small delay to prevent rapid redirects
-          setTimeout(() => {
-            router.push(redirectTo)
-          }, 100)
-        } else {
+      checkVerificationStatus()
+        .then((status) => {
+          if (!status.required) {
+            const dest = sessionStorage.getItem("redirectTo") || `/${user.user_id}/dashboard`
+            sessionStorage.removeItem("redirectTo")
+            router.push(dest)
+          } else {
+            setRedirecting(false)
+            redirectAttempted.current = false
+          }
+        })
+        .catch(() => {
           setRedirecting(false)
           redirectAttempted.current = false
-        }
-      }).catch((error) => {
-        console.error("Verification status check failed:", error)
-        setRedirecting(false)
-        redirectAttempted.current = false
-      })
+        })
     }
   }, [user, checkVerificationStatus, router])
 
@@ -91,71 +84,62 @@ export default function LoginPage() {
     window.history.replaceState({}, "", url.toString())
   }
 
-  const handleLogin = async (email: string, password: string) => {
+  // const clearParams = () => {
+  //   const url = new URL(window.location.href)
+  //   url.searchParams.delete("status")
+  //   url.searchParams.delete("message")
+  //   window.history.replaceState({}, "", url.toString())
+  // }
+
+  // **NEW**: simplified handleLogin
+
+  const handleLogin = async (data: { email: string; password: string }) => {
     setError(null)
     setRedirecting(true)
-    
+
     try {
-      await login(email, password)
-      // The useEffect will handle the redirect after login
+      // Delegates actual login & verification errors to the form
+      await login(data.email, data.password)
+      // successful login → your useEffect redirect runs
     } catch (err: any) {
       setRedirecting(false)
-      
+
       if (err.requiresVerification) {
-        // Store verification data for the OTP page
-        sessionStorage.setItem("verificationUserId", err.userId)
-        sessionStorage.setItem("verificationEmail", err.email || email)
-        sessionStorage.setItem("returnUrl", sessionStorage.getItem("redirectTo") || `/(user)/${err.userId}/dashboard`)
-        
-        // Navigate to OTP verification page
-        router.push("/auth/otp-verify")
-        
-        toast.info("Verification Required", {
-          description: "Please verify your account to continue.",
-          duration: 5000,
-          action: {
-            label: "Verify Now",
-            onClick: () => router.push("/auth/otp-verify")
-          }
-        })
-      } else {
-        setError(err.message || "Login failed")
-        toast.error("Login Failed", {
-          description: err.message || "Login failed",
-          duration: 4000
-        })
+        // rethrow so LoginForm.handleSubmit will catch it
+        throw err
       }
+
+      // handle all other errors here
+      const msg = err.message || "Please try again."
+      setError(msg)
+      toast.error("Login Failed", {
+        description: msg,
+        icon: <AlertCircle className="h-4 w-4 text-red-500" />
+      })
     }
   }
 
-  const handleVerificationRequired = (userId: string) => {
-    // Store verification data
-    sessionStorage.setItem("verificationUserId", userId)
-    sessionStorage.setItem("returnUrl", sessionStorage.getItem("redirectTo") || `/(user)/${userId}/dashboard`)
-    
-    // Navigate to verification page
-    router.push("/auth/otp-verify")
-    
-    toast.info("Redirecting to Verification", {
-      description: "Taking you to the verification page...",
-      duration: 3000
-    })
-  }
+  // const handleVerificationRequired = (userId: string) => {
+  //   // Store verification data
+  //   sessionStorage.setItem("verificationUserId", userId)
+  //   sessionStorage.setItem("returnUrl", sessionStorage.getItem("redirectTo") || `/(user)/${userId}/dashboard`)
+
+  //   // Navigate to verification page
+  //   router.push("/auth/otp-verify")
+
+  //   toast.info("Redirecting to Verification", {
+  //     description: "Taking you to the verification page...",
+  //     duration: 3000
+  //   })
+  // }
 
   // Show loading state while redirecting
+
   if (redirecting) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-        <div className="text-center space-y-6">
-          <div className="relative">
-            <div className="h-16 w-16 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent mx-auto" />
-            <div className="absolute inset-0 h-16 w-16 rounded-full bg-emerald-500/10 animate-pulse mx-auto" />
-          </div>
-          <div className="space-y-2">
-            <p className="text-emerald-700 text-xl font-semibold">Signing you in...</p>
-            <p className="text-emerald-600 text-sm">Please wait a moment</p>
-          </div>
-        </div>
+        <Loader2 className="animate-spin h-16 w-16 text-emerald-600" />
+        <p className="ml-4 text-emerald-700">Signing you in…</p>
       </div>
     )
   }
@@ -175,7 +159,7 @@ export default function LoginPage() {
           className="absolute -top-16 left-0 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-100/50"
           onClick={() => router.push("/")}
         >
-          <ArrowLeft className="mr-2 h-4 w-4" /> 
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Home
         </Button>
 
@@ -191,7 +175,7 @@ export default function LoginPage() {
                 <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-amber-400" />
               </div>
             </div>
-            
+
             <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-700 to-teal-700 bg-clip-text text-transparent">
               Welcome Back
             </h1>
@@ -221,9 +205,13 @@ export default function LoginPage() {
           )}
 
           {/* Login Form */}
-          <LoginForm 
-            onSubmit={({ email, password }) => handleLogin(email, password)}
-            onVerificationRequired={handleVerificationRequired}
+          <LoginForm
+            onSubmit={handleLogin}
+            onVerificationRequired={() => {
+              // when the user clicks “Verify Account Now” inside the form,
+              // the form will call this, so you can navigate to OTP:
+              router.push("/auth/otp-verify")
+            }}
           />
 
           {/* Footer Links */}
@@ -231,18 +219,18 @@ export default function LoginPage() {
             <div className="text-center space-y-2">
               <p className="text-sm text-emerald-700">
                 Don&apos;t have an account?{" "}
-                <Link 
-                  href="/auth/register" 
+                <Link
+                  href="/auth/register"
                   className="font-semibold text-emerald-600 hover:text-emerald-700 underline-offset-4 hover:underline transition-colors"
                 >
                   Sign up for free
                 </Link>
               </p>
-              
+
               <p className="text-sm text-emerald-600">
                 Forgot your password?{" "}
-                <Link 
-                  href="/auth/complete-recovery" 
+                <Link
+                  href="/auth/complete-recovery"
                   className="font-semibold text-emerald-600 hover:text-emerald-700 underline-offset-4 hover:underline transition-colors"
                 >
                   Reset it here

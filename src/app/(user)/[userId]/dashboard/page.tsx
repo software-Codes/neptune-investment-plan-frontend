@@ -45,8 +45,10 @@ export default function DashboardPage() {
   };
 
   const goHome = () => {
-    router.push('/');
-  };
+  const url = new URL('/', window.location.origin);
+  url.searchParams.set('from', 'dashboard');
+  router.push(url.toString());
+};
 
   if (loading) {
     return (
