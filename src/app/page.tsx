@@ -5,6 +5,7 @@ import React from 'react'
 import { Header } from '@/components/layout/Header'
 import { ChartAreaInteractive } from '@/components/charts'
 import HeroSection from '@/components/ui/hero-section'
+import DashboardSectionHomePage from '@/components/ui/Dashboard-cards-home'
 
 /**
  * Home page layout: includes Header and responsive main content area.
@@ -18,8 +19,10 @@ export default function Page() {
       {/* Main content area grows to fill available space */}
       <main className="flex-grow w-full container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <HeroSection />
+         <DashboardSectionHomePage />
 
         <ChartAreaInteractive />
+       
       </main>
 
       {/* Optional footer */}
