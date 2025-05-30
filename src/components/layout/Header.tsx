@@ -72,7 +72,7 @@ export const Header: React.FC = () => {
         {/* Logo */}
         <Link href={userId ? `/${userId}/dashboard` : '/'} className="flex items-center space-x-2">
           <div className="relative h-8 w-8">
-            <Image src={NeptuneLogo} alt="Logo" fill className="object-contain" />
+            <Image src={NeptuneLogo} alt="Logo" fill className="object-contain rounded-full" />
           </div>
           <span className="text-xl font-bold bg-gradient-to-r from-green-600 to-yellow-400 bg-clip-text text-transparent">
             Neptune
