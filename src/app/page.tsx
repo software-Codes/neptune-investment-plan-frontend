@@ -3,6 +3,8 @@
 
 import React from 'react'
 import { Header } from '@/components/layout/Header'
+import { ChartAreaInteractive } from '@/components/charts'
+import HeroSection from '@/components/ui/hero-section'
 
 /**
  * Home page layout: includes Header and responsive main content area.
@@ -15,13 +17,9 @@ export default function Page() {
 
       {/* Main content area grows to fill available space */}
       <main className="flex-grow w-full container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* TODO: Replace with actual homepage content */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-emerald-700 mb-4">Welcome to Neptune</h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">
-            Your dashboard awaits. Use the navigation above to explore your account.
-          </p>
-        </div>
+        <HeroSection />
+
+        <ChartAreaInteractive />
       </main>
 
       {/* Optional footer */}
