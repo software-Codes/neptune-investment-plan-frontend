@@ -6,13 +6,15 @@ import { useAuth } from '@/hooks/useAuth'
 import { Loader2 } from 'lucide-react'
 import { UserProfile } from '@/types/types'
 import WalletBalancesCard from './WalletBalancesCard'
+import ActiveInvestmentsSummary from './ActiveInvestmentsSummary'
+import ReferralStatisticsCard from './ReferralStatisticsCard'
 
 const DashboardSectionHomePage = () => {
-    const {user, isLoading, getCurrentUser} =  useAuth();
-    const [profile, setProfile] = useState<UserProfile | null>(null)
+  const { user, isLoading, getCurrentUser } = useAuth()
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
 
-      useEffect(() => {
+  useEffect(() => {
     if (!isLoading) {
       getCurrentUser()
         .then((data) => setProfile(data))
@@ -20,11 +22,13 @@ const DashboardSectionHomePage = () => {
         .finally(() => setLoadingProfile(false))
     }
   }, [isLoading, getCurrentUser])
-    const handleTransfer = (walletId: string) => {
+
+  const handleTransfer = (walletId: string) => {
     console.log(`Initiate transfer for wallet ${walletId}`)
-    // e.g. router.push(`/transfer/${walletId}`)
+    // Example: router.push(`/transfer/${walletId}`)
   }
-    if (isLoading || loadingProfile) {
+
+  if (isLoading || loadingProfile) {
     return (
       <div className="flex items-center justify-center h-40">
         <Loader2 className="animate-spin h-8 w-8 text-emerald-600" />
@@ -32,9 +36,8 @@ const DashboardSectionHomePage = () => {
     )
   }
 
-    
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {profile?.wallets.length ? (
         <WalletBalancesCard wallets={profile.wallets} onTransfer={handleTransfer} />
       ) : (
@@ -42,6 +45,10 @@ const DashboardSectionHomePage = () => {
           No wallets available.
         </p>
       )}
+
+      {profile && <ActiveInvestmentsSummary profile={profile} />}
+      <ReferralStatisticsCard profile={profile} />
+
     </div>
   )
 }
