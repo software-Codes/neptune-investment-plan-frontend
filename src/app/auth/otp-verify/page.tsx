@@ -1,6 +1,5 @@
-/* eslint-disable react/no-unescaped-entities */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* src/app/(auth)/verify-otp/page.tsx */
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -15,52 +14,46 @@ import { Input } from "@/components/ui/input"
 import { ContactMethod } from "@/types/types"
 
 interface OTPInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
+  value: string
+  onChange: (value: string) => void
+  disabled?: boolean
 }
 
 const OTPInput = ({ value, onChange, disabled }: OTPInputProps) => {
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   const handleChange = (index: number, inputValue: string) => {
-    // Only allow digits
-    const numericValue = inputValue.replace(/\D/g, '');
-    if (numericValue.length > 1) return;
+    const numericValue = inputValue.replace(/\D/g, "")
+    if (numericValue.length > 1) return
 
-    const newValue = value.split('');
-    newValue[index] = numericValue;
-    const updatedValue = newValue.join('');
+    const newValue = value.split("")
+    newValue[index] = numericValue
+    onChange(newValue.join(""))
 
-    onChange(updatedValue);
-
-    // Auto-focus next input
     if (numericValue && index < 5) {
-      inputRefs.current[index + 1]?.focus();
+      inputRefs.current[index + 1]?.focus()
     }
-  };
+  }
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !value[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+    if (e.key === "Backspace" && !value[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus()
     }
-    if (e.key === 'ArrowLeft' && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+    if (e.key === "ArrowLeft" && index > 0) {
+      inputRefs.current[index - 1]?.focus()
     }
-    if (e.key === 'ArrowRight' && index < 5) {
-      inputRefs.current[index + 1]?.focus();
+    if (e.key === "ArrowRight" && index < 5) {
+      inputRefs.current[index + 1]?.focus()
     }
-  };
+  }
 
   const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    onChange(pastedData);
-
-    // Focus the last filled input or the next empty one
-    const focusIndex = Math.min(pastedData.length, 5);
-    inputRefs.current[focusIndex]?.focus();
-  };
+    e.preventDefault()
+    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)
+    onChange(pastedData)
+    const focusIndex = Math.min(pastedData.length, 5)
+    inputRefs.current[focusIndex]?.focus()
+  }
 
   return (
     <div className="flex gap-3 justify-center">
@@ -72,7 +65,7 @@ const OTPInput = ({ value, onChange, disabled }: OTPInputProps) => {
           inputMode="numeric"
           pattern="\d*"
           maxLength={1}
-          value={value[index] || ''}
+          value={value[index] || ""}
           onChange={(e) => handleChange(index, e.target.value)}
           onKeyDown={(e) => handleKeyDown(index, e)}
           onPaste={handlePaste}
@@ -81,8 +74,8 @@ const OTPInput = ({ value, onChange, disabled }: OTPInputProps) => {
         />
       ))}
     </div>
-  );
-};
+  )
+}
 
 export default function VerifyOTPPage() {
   const router = useRouter()
@@ -100,94 +93,99 @@ export default function VerifyOTPPage() {
   const [preferredContactMethod, setPreferredContactMethod] = useState<ContactMethod>(ContactMethod.EMAIL)
   const initializationRef = useRef(false)
 
-
+  // 1) Initialize userId & email (URL → in-memory state → sessionStorage)
   useEffect(() => {
     if (initializationRef.current) return
     initializationRef.current = true
 
-    const initializeData = async () => {
-      try {
-        let userIdToUse = null
-        let emailToUse = null
-        let contactMethod: ContactMethod = ContactMethod.EMAIL
+    const initializeData = () => {
+      let userIdToUse = searchParams.get("userId")
+      let emailToUse: string | null = null
+      let contactMethod: ContactMethod = ContactMethod.EMAIL
 
-        // Priority 1: Check URL parameters (from registration redirect)
-        userIdToUse = searchParams.get("userId")
-        emailToUse = searchParams.get("email")
-        const urlContactMethod = searchParams.get("method") as ContactMethod
-        if (urlContactMethod) contactMethod = urlContactMethod
+      // A) Try URL parameters first
+      const urlUserId = searchParams.get("userId")
+      const urlEmail = searchParams.get("email")
+      const urlMethod = searchParams.get("method") as ContactMethod
+      if (urlUserId && urlEmail) {
+        userIdToUse = urlUserId
+        emailToUse = urlEmail
+        if (urlMethod) contactMethod = urlMethod
+      }
 
-        // Priority 2: Check verification state from AuthProvider
-        if (!userIdToUse && verificationState) {
-          userIdToUse = verificationState.user_id
-          emailToUse = verificationState.email
-          contactMethod = verificationState.method
-        }
+      // B) Fallback to in-memory verificationState from AuthProvider
+      if ((!userIdToUse || !emailToUse) && verificationState) {
+        userIdToUse = verificationState.user_id
+        emailToUse = verificationState.email
+        contactMethod = verificationState.method
+      }
 
-
-        // Priority 3: Check session storage (fallback)
-        if (!userIdToUse) {
-          const storedVerificationState = sessionStorage.getItem("verificationState")
-          if (storedVerificationState) {
-            try {
-              const parsedState = JSON.parse(storedVerificationState)
-              userIdToUse = parsedState.user_id
-              emailToUse = parsedState.email
-              contactMethod = parsedState.method || ContactMethod.EMAIL // Fixed this line
-            } catch (e) {
-              console.error("Error parsing stored verification state:", e)
-            }
+      // C) Fallback to sessionStorage “verificationState” object if present
+      if ((!userIdToUse || !emailToUse) && typeof window !== "undefined") {
+        const stored = sessionStorage.getItem("verificationState")
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored)
+            userIdToUse = parsed.user_id
+            emailToUse = parsed.email
+            if (parsed.method) contactMethod = parsed.method
+          } catch {
+            /* ignore parse errors */
           }
         }
-
-        // Validate required data
-        if (!userIdToUse || !emailToUse) {
-          setError("Verification data not found. Please try registering again.")
-          toast.error("Verification data missing", {
-            description: "Please register again to receive a verification code",
-            action: {
-              label: "Register",
-              onClick: () => router.push("/auth/register")
-            }
-          })
-          setIsInitializing(false)
-          return
-        }
-
-        setUserId(userIdToUse)
-        setEmail(emailToUse)
-        setPreferredContactMethod(contactMethod)
-        setCountdown(60)
-
-        toast.info("Verification code sent", {
-          description: `Please check your ${contactMethod === ContactMethod.EMAIL ? 'email' : 'phone'} for the 6-digit code`,
-          duration: 5000
-        })
-
-      } catch (error) {
-        console.error("Error initializing OTP verification:", error)
-        setError("An error occurred while loading verification data")
-      } finally {
-        setIsInitializing(false)
       }
+
+      // D) Final fallback to older “verificationUserId” & “verificationEmail” keys
+      if (!userIdToUse && typeof window !== "undefined") {
+        userIdToUse = sessionStorage.getItem("verificationUserId")
+      }
+      if (!emailToUse && typeof window !== "undefined") {
+        emailToUse = sessionStorage.getItem("verificationEmail")
+      }
+
+      // If still missing, show an error
+      if (!userIdToUse || !emailToUse) {
+        setError("Verification data not found. Please register again.")
+        toast.error("Verification data missing", {
+          description: "Please register again to receive a verification code",
+          action: {
+            label: "Register",
+            onClick: () => router.push("/auth/register"),
+          },
+        })
+        setIsInitializing(false)
+        return
+      }
+
+      setUserId(userIdToUse)
+      setEmail(emailToUse)
+      setPreferredContactMethod(contactMethod)
+      setCountdown(60)
+
+      toast.info("Verification code sent", {
+        description: `Please check your ${contactMethod === ContactMethod.EMAIL ? "email" : "phone"} for the 6-digit code`,
+        duration: 5000,
+      })
+      setIsInitializing(false)
     }
 
     initializeData()
   }, [verificationState, searchParams, router])
 
-  // Countdown timer
+  // 2) Countdown timer for “Resend”
   useEffect(() => {
     if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
+      const timer = setTimeout(() => setCountdown((c) => c - 1), 1000)
       return () => clearTimeout(timer)
     }
   }, [countdown])
 
+  // 3) On “Verify” button click
   const handleSubmit = async () => {
     if (!userId || otp.length !== 6) {
       setError("Please enter a complete 6-digit verification code")
       toast.error("Invalid code", {
-        description: "Please enter all 6 digits of your verification code"
+        description: "Please enter all 6 digits of your verification code",
       })
       return
     }
@@ -196,35 +194,39 @@ export default function VerifyOTPPage() {
     setError(null)
 
     try {
+      // Send exactly { userId, otpCode, purpose } — matches validateOtpVerification middleware
       await verifyOTP({
         userId,
         otpCode: otp,
-        purpose: 'registration'
+        purpose: "registration",
       })
 
-      // Success is handled in AuthProvider
-      // Clear session storage
+      // Clear any stored verification data
       sessionStorage.removeItem("verificationState")
+      sessionStorage.removeItem("verificationUserId")
+      sessionStorage.removeItem("verificationEmail")
 
-    } catch (error: any) {
-      console.error("OTP verification failed:", error)
-      setError(error.message || "Invalid or expired code. Please try again")
-
-      // Clear the OTP input on error
-      setOtp("")
-
+      // Immediately redirect to KYC‐upload
+      router.push("/auth/kyc-documents")
+      return
+    } catch (err: any) {
+      // If backend returns “invalid input syntax for UUID” it means userId was undefined
+      console.error("OTP verification failed:", err)
+      setError(err.message || "Invalid or expired code. Please try again")
+      setOtp("") // clear the 6-digit fields
       toast.error("Verification failed", {
-        description: error.message || "Please check your code and try again"
+        description: err.message || "Please check your code and try again",
       })
     } finally {
       setIsVerifying(false)
     }
   }
 
+  // 4) On “Resend verification code” button click
   const handleResendOTP = async () => {
     if (!userId) {
       toast.error("Error", {
-        description: "User ID not found. Please try registering again."
+        description: "User ID not found. Please register again.",
       })
       return
     }
@@ -234,40 +236,39 @@ export default function VerifyOTPPage() {
 
     try {
       await resendOTP(userId, preferredContactMethod)
-
       setCountdown(60)
       setOtp("")
-
       toast.success("New code sent!", {
-        description: `Check your ${preferredContactMethod === 'email' ? 'email' : 'phone'} for the new verification code`,
-        duration: 4000
+        description: `Check your ${preferredContactMethod === ContactMethod.EMAIL ? "email" : "phone"} for the new verification code`,
+        duration: 4000,
       })
-
-    } catch (error: any) {
-      console.error("Resend OTP failed:", error)
-      setError(error.message || "Failed to resend verification code")
-
+    } catch (err: any) {
+      console.error("Resend OTP failed:", err)
+      setError(err.message || "Failed to resend verification code")
       toast.error("Failed to resend", {
-        description: error.message || "Please try again in a moment"
+        description: err.message || "Please try again in a moment",
       })
     } finally {
       setIsResending(false)
     }
   }
 
+  // 5) “Back” button: clear everything and return to register
   const handleBack = () => {
-    // Clear verification data when going back
     sessionStorage.removeItem("verificationState")
-
+    sessionStorage.removeItem("verificationUserId")
+    sessionStorage.removeItem("verificationEmail")
     router.push("/auth/register")
   }
 
+  // 6) Format countdown as “MM:SS” or “XXs”
   const formatCountdown = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
-    return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`
+    return mins > 0 ? `${mins}:${secs.toString().padStart(2, "0")}` : `${secs}s`
   }
 
+  // 7) While we’re still figuring out userId/email:
   if (isInitializing) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4 py-8 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
@@ -285,7 +286,7 @@ export default function VerifyOTPPage() {
     )
   }
 
-  const displayDestination = preferredContactMethod === ContactMethod.EMAIL ? email : 'your phone'
+  const displayDestination = preferredContactMethod === ContactMethod.EMAIL ? email : "your phone"
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
@@ -304,14 +305,10 @@ export default function VerifyOTPPage() {
                 Verify Your Account
               </CardTitle>
               <div className="space-y-1">
-                <p className="text-emerald-600 text-sm">
-                  We've sent a 6-digit code to
-                </p>
-                <p className="text-emerald-800 font-medium text-sm">
-                  {displayDestination}
-                </p>
+                <p className="text-emerald-600 text-sm">We&apos;ve sent a 6-digit code to</p>
+                <p className="text-emerald-800 font-medium text-sm">{displayDestination}</p>
                 <p className="text-emerald-500 text-xs">
-                  via {preferredContactMethod === ContactMethod.EMAIL ? 'email' : 'SMS'}
+                  via {preferredContactMethod === ContactMethod.EMAIL ? "email" : "SMS"}
                 </p>
               </div>
             </div>
@@ -331,17 +328,11 @@ export default function VerifyOTPPage() {
                 <label className="block text-sm font-medium text-emerald-700 text-center">
                   Enter verification code
                 </label>
-                <OTPInput
-                  value={otp}
-                  onChange={setOtp}
-                  disabled={isVerifying}
-                />
+                <OTPInput value={otp} onChange={setOtp} disabled={isVerifying} />
               </div>
 
               <div className="text-center space-y-3">
-                <p className="text-sm text-gray-600">
-                  Didn't receive the code?
-                </p>
+                <p className="text-sm text-gray-600">Didn&apos;t receive the code?</p>
                 <Button
                   variant="ghost"
                   onClick={handleResendOTP}
@@ -395,7 +386,7 @@ export default function VerifyOTPPage() {
 
             <div className="text-center pt-4 border-t border-emerald-100">
               <p className="text-xs text-gray-500">
-                Need help? {" "}
+                Need help?{" "}
                 <button
                   className="text-emerald-600 hover:text-emerald-700 font-medium"
                   onClick={() => toast.info("Contact support at support@example.com")}

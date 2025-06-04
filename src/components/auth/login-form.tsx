@@ -31,7 +31,10 @@ import {
   CheckCircle2,
   Smartphone,
   Clock,
-  Shield
+  Shield,
+  Lock,
+  Eye,
+  EyeOff
 } from "lucide-react"
 import { authApi } from "@/lib/api/api-client"
 import Link from "next/link"
@@ -58,6 +61,7 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
   const [userData, setUserData] = useState<{ userId: string, email: string, method?: string } | null>(null)
   const [resendingCode, setResendingCode] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
+  const [showPassword, setShowPassword] = useState(false)
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
@@ -158,7 +162,7 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
     }
   }
 
-  const  handleVerifyAccount = () => {
+  const handleVerifyAccount = () => {
     if (userData?.userId && onVerificationRequired) {
       onVerificationRequired(userData.userId)
     }
@@ -177,162 +181,189 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
   }
 
   return (
-    <div className={cn("grid gap-6", className)} {...props}>
+    <div className={cn("space-y-6", className)} {...props}>
       {/* Generic Error Alert */}
       {error && !showVerificationAlert && (
-        <Alert variant="destructive" className="bg-red-50 border-red-200 shadow-sm">
-          <AlertCircle className="h-4 w-4 text-red-600" />
-          <AlertTitle className="text-red-800 font-semibold">Login Failed</AlertTitle>
-          <AlertDescription className="text-red-700">{error}</AlertDescription>
+        <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <AlertTitle className="text-red-800 dark:text-red-200 font-semibold">Login Failed</AlertTitle>
+          <AlertDescription className="text-red-700 dark:text-red-300">{error}</AlertDescription>
         </Alert>
       )}
 
       {/* Enhanced Verification Required Alert */}
       {showVerificationAlert && userData && (
-        <div className="space-y-4">
-          <Alert className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 shadow-lg rounded-xl overflow-hidden">
-            <div className="flex items-start space-x-4 p-1">
-              <div className="flex-shrink-0">
-                <div className="relative">
-                  <Shield className="h-8 w-8 text-amber-600" />
-                  <div className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center">
-                    <AlertCircle className="h-2.5 w-2.5 text-white" />
-                  </div>
+        <Alert className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 shadow-lg rounded-xl overflow-hidden dark:from-amber-950/20 dark:to-orange-950/20 dark:border-amber-800">
+          <div className="flex items-start space-x-4 p-1">
+            <div className="flex-shrink-0">
+              <div className="relative">
+                <Shield className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                <div className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center">
+                  <AlertCircle className="h-2.5 w-2.5 text-white" />
                 </div>
               </div>
-              
-              <div className="flex-1 min-w-0">
-                <AlertTitle className="text-amber-900 font-bold text-lg mb-2 flex items-center gap-2">
-                  Account Verification Required
-                  <div className="h-2 w-2 bg-amber-500 rounded-full animate-pulse"></div>
-                </AlertTitle>
-                
-                <AlertDescription className="space-y-4">
-                  <div className="text-amber-800 space-y-2">
-                    <p className="text-sm leading-relaxed">
-                      Your account <span className="font-semibold text-amber-900">{userData.email}</span> needs 
-                      to be verified before you can sign in.
-                    </p>
-                    
-                    <div className="flex items-center space-x-2 text-sm text-amber-700 bg-amber-100/50 p-3 rounded-lg">
-                      {getMethodIcon(userData.method)}
-                      <span>
-                        Verification code will be sent to your {getMethodText(userData.method)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                    <Button
-                      onClick={handleVerifyAccount}
-                      size="sm"
-                      className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 flex-1 sm:flex-none"
-                    >
-                      <ShieldCheck className="h-4 w-4" />
-                      Verify Account Now
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                    
-                    <Button
-                      onClick={handleResendVerification}
-                      variant="outline"
-                      size="sm"
-                      disabled={resendingCode || resendCooldown > 0}
-                      className="border-amber-300 text-amber-700 hover:bg-amber-50 hover:border-amber-400 transition-all duration-200 flex items-center gap-2 flex-1 sm:flex-none"
-                    >
-                      {resendingCode ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Sending...
-                        </>
-                      ) : resendCooldown > 0 ? (
-                        <>
-                          <Clock className="h-4 w-4" />
-                          Wait {resendCooldown}s
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="h-4 w-4" />
-                          Resend Code
-                        </>
-                      )}
-                    </Button>
-                  </div>
-
-                  {/* Help Text */}
-                  <div className="text-xs text-amber-600 bg-amber-100/30 p-2 rounded-md border border-amber-200/50">
-                    <p className="flex items-center gap-2">
-                      <AlertCircle className="h-3 w-3 flex-shrink-0" />
-                      Need help? Check your spam folder or contact support if you don&apos;t receive the code.
-                    </p>
-                  </div>
-                </AlertDescription>
-              </div>
             </div>
-          </Alert>
-        </div>
+            
+            <div className="flex-1 min-w-0">
+              <AlertTitle className="text-amber-900 dark:text-amber-100 font-bold text-lg mb-2 flex items-center gap-2">
+                Account Verification Required
+                <div className="h-2 w-2 bg-amber-500 rounded-full animate-pulse"></div>
+              </AlertTitle>
+              
+              <AlertDescription className="space-y-4">
+                <div className="text-amber-800 dark:text-amber-200 space-y-2">
+                  <p className="text-sm leading-relaxed">
+                    Your account <span className="font-semibold text-amber-900 dark:text-amber-100">{userData.email}</span> needs 
+                    to be verified before you can sign in.
+                  </p>
+                  
+                  <div className="flex items-center space-x-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-800/30 p-3 rounded-lg">
+                    {getMethodIcon(userData.method)}
+                    <span>
+                      Verification code will be sent to your {getMethodText(userData.method)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <Button
+                    onClick={handleVerifyAccount}
+                    size="sm"
+                    className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 flex-1 sm:flex-none"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    Verify Account Now
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button
+                    onClick={handleResendVerification}
+                    variant="outline"
+                    size="sm"
+                    disabled={resendingCode || resendCooldown > 0}
+                    className="border-amber-300 text-amber-700 hover:bg-amber-50 hover:border-amber-400 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/30 transition-all duration-200 flex items-center gap-2 flex-1 sm:flex-none"
+                  >
+                    {resendingCode ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : resendCooldown > 0 ? (
+                      <>
+                        <Clock className="h-4 w-4" />
+                        Wait {resendCooldown}s
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4" />
+                        Resend Code
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Help Text */}
+                <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-100/30 dark:bg-amber-800/20 p-2 rounded-md border border-amber-200/50 dark:border-amber-700/50">
+                  <p className="flex items-center gap-2">
+                    <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                    Need help? Check your spam folder or contact support if you don&apos;t receive the code.
+                  </p>
+                </div>
+              </AlertDescription>
+            </div>
+          </div>
+        </Alert>
       )}
 
       {/* Login Form */}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
+          {/* Email Field */}
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-emerald-800 font-medium">Email</FormLabel>
+                <FormLabel className="text-slate-700 dark:text-slate-300 flex items-center gap-2 font-medium">
+                  <Mail className="w-4 h-4" />
+                  Email Address
+                </FormLabel>
                 <FormControl>
                   <Input
                     {...field}
                     type="email"
-                    placeholder="m@example.com"
+                    placeholder="john@example.com"
                     disabled={isLoading}
-                    className="h-12 border-emerald-200 bg-emerald-50/50 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+                    className="h-12 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:border-emerald-500 focus:ring-emerald-200 dark:focus:border-emerald-400 dark:focus:ring-emerald-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
                   />
                 </FormControl>
-                <FormMessage className="text-red-500 text-sm" />
+                <FormMessage className="text-sm text-red-600 dark:text-red-400" />
               </FormItem>
             )}
           />
 
+          {/* Password Field */}
           <FormField
             control={form.control}
             name="password"
             render={({ field }) => (
               <FormItem>
                 <div className="flex items-center justify-between">
-                  <FormLabel className="text-emerald-800 font-medium">Password</FormLabel>
+                  <FormLabel className="text-slate-700 dark:text-slate-300 flex items-center gap-2 font-medium">
+                    <Lock className="w-4 h-4" />
+                    Password
+                  </FormLabel>
                   <Link
                     href="/auth/complete-recovery"
-                    className="text-sm text-emerald-600 hover:text-emerald-700 underline-offset-4 hover:underline transition-colors"
+                    className="text-sm text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 underline-offset-4 hover:underline transition-colors"
                   >
                     Forgot password?
                   </Link>
                 </div>
                 <FormControl>
-                  <Input
-                    {...field}
-                    type="password"
-                    disabled={isLoading}
-                    className="h-12 border-emerald-200 bg-emerald-50/50 text-emerald-900 focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
-                  />
+                  <div className="relative">
+                    <Input
+                      {...field}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      className="h-12 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:border-emerald-500 focus:ring-emerald-200 dark:focus:border-emerald-400 dark:focus:ring-emerald-800 pr-12 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
+                      disabled={isLoading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                      disabled={isLoading}
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </FormControl>
-                <FormMessage className="text-red-500 text-sm" />
+                <FormMessage className="text-sm text-red-600 dark:text-red-400" />
               </FormItem>
             )}
           />
 
+          {/* Submit Button */}
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-lg font-medium shadow-md hover:shadow-lg transition-all duration-200"
+            className="w-full h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading && (
-              <Icons.spinner className="mr-2 h-5 w-5 animate-spin" />
+            {isLoading ? (
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Signing in...</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <span>Sign in</span>
+                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                  →
+                </div>
+              </div>
             )}
-            {isLoading ? "Signing in..." : "Sign in"}
           </Button>
         </form>
       </Form>

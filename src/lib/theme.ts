@@ -43,6 +43,6 @@ export const themes = {
     input: "217.2 32.6% 17.5%",
     ring: "142.1 70.6% 45.3%",
   },
-}
+};
 
-export type Theme = keyof typeof themes
+export type Theme = keyof typeof themes;

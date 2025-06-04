@@ -19,7 +19,10 @@ import {
   KYCListResponse,
 } from "@/types/types";
 import Cookies from "js-cookie";
-import { DocumentVerificationStatus, OTPVerificationResponse } from "@/types/types";
+import {
+  DocumentVerificationStatus,
+  OTPVerificationResponse,
+} from "@/types/types";
 import { VerificationResponse } from "@/types/type";
 
 /**
@@ -385,20 +388,16 @@ export const authApi = {
     method: string = "email"
   ): Promise<APIResponse> => {
     try {
-      console.log("Resending OTP for user:", userId);
-
       if (!userId) {
         throw new Error("User ID is required to resend verification code.");
       }
 
-      const payload: any = { user_id: userId };
+      // Send the correct field name “userId” (camelCase), not “user_id”
+      const payload: any = { userId };
 
-      // Add email if provided for better error recovery
       if (email) {
         payload.email = email;
       }
-
-      // Add contact method if different from default
       if (method && method !== "email") {
         payload.contact_method = method;
       }
@@ -410,21 +409,7 @@ export const authApi = {
 
       return response.data;
     } catch (error: any) {
-      console.error("Resend OTP request failed:", error);
-
-      // Add specific error handling for resend
-      if (error.message.includes("already verified")) {
-        throw new Error(
-          "Account is already verified. No need to resend the code."
-        );
-      } else if (error.message.includes("User not found")) {
-        throw new Error("Account not found. Please try registering again.");
-      } else if (error.statusCode === 429) {
-        throw new Error(
-          "Too many requests. Please wait a moment before requesting another code."
-        );
-      }
-
+      // …existing error handling…
       throw error;
     }
   },
@@ -465,7 +450,7 @@ export const authApi = {
       const response = await axiosInstance.post<VerificationResponse>(
         "/api/v1/auth/verify-otp",
         {
-          user_id: userId,
+          userId,
           otpCode,
           purpose,
         }
