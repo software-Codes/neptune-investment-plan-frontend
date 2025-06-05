@@ -20,13 +20,13 @@ import {
 } from "@/components/ui/form"
 import { Icons } from "@/components/ui/icons"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { 
-  X, 
-  ShieldCheck, 
-  Loader2, 
-  Mail, 
-  ArrowRight, 
-  RefreshCw, 
+import {
+  X,
+  ShieldCheck,
+  Loader2,
+  Mail,
+  ArrowRight,
+  RefreshCw,
   AlertCircle,
   CheckCircle2,
   Smartphone,
@@ -101,8 +101,8 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
       // Check if the error is due to verification requirement
       if (error.requiresVerification && (error.userId || error.user_id)) {
         setShowVerificationAlert(true)
-        setUserData({ 
-          userId: error.userId || error.user_id, 
+        setUserData({
+          userId: error.userId || error.user_id,
           email: data.email,
           method: error.preferredContactMethod || error.preferred_contact_method || 'email'
         })
@@ -143,13 +143,13 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
     try {
       setResendingCode(true)
       await authApi.resendOTP(userData.userId, userData.email, userData.method)
-      
+
       toast.success("Verification Code Sent!", {
         description: `A new code has been sent to your ${userData.method === 'phone' ? 'phone' : 'email'}`,
         duration: 5000,
         icon: <CheckCircle2 className="h-4 w-4 text-green-500" />
       })
-      
+
       startCooldown()
     } catch (error: any) {
       const message = error instanceof Error ? error.message : "Failed to send verification code"
@@ -203,20 +203,20 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
                 </div>
               </div>
             </div>
-            
+
             <div className="flex-1 min-w-0">
               <AlertTitle className="text-amber-900 dark:text-amber-100 font-bold text-lg mb-2 flex items-center gap-2">
                 Account Verification Required
                 <div className="h-2 w-2 bg-amber-500 rounded-full animate-pulse"></div>
               </AlertTitle>
-              
+
               <AlertDescription className="space-y-4">
                 <div className="text-amber-800 dark:text-amber-200 space-y-2">
                   <p className="text-sm leading-relaxed">
-                    Your account <span className="font-semibold text-amber-900 dark:text-amber-100">{userData.email}</span> needs 
+                    Your account <span className="font-semibold text-amber-900 dark:text-amber-100">{userData.email}</span> needs
                     to be verified before you can sign in.
                   </p>
-                  
+
                   <div className="flex items-center space-x-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-800/30 p-3 rounded-lg">
                     {getMethodIcon(userData.method)}
                     <span>
@@ -236,7 +236,7 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
                     Verify Account Now
                     <ArrowRight className="h-4 w-4" />
                   </Button>
-                  
+
                   <Button
                     onClick={handleResendVerification}
                     variant="outline"
@@ -315,7 +315,7 @@ export function LoginForm({ className, onSubmit, onVerificationRequired, ...prop
                     Password
                   </FormLabel>
                   <Link
-                    href="/auth/complete-recovery"
+                    href="/auth/auth-code/complete-recovery"
                     className="text-sm text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 underline-offset-4 hover:underline transition-colors"
                   >
                     Forgot password?

@@ -1,7 +1,9 @@
+//auth/layout.tsx
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import type { ReactNode } from "react"
+import { usePathname } from "next/navigation"
 import { ModeToggle } from "@/components/ModeToggle"
 import { DollarSign, Activity, Gift, Lock } from "lucide-react"
 
@@ -10,12 +12,17 @@ interface AuthLayoutProps {
 }
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
+  const pathname = usePathname()
+  const scriptRef = useRef<HTMLScriptElement | null>(null);
+
+  const isAuthCodeRoute = pathname?.includes('/auth-code')
+
   useEffect(() => {
-    // Create container for TradingView widget
+    if (isAuthCodeRoute) return;
+
     const container = document.querySelector('.tradingview-widget-container__widget');
     if (!container) return;
 
-    // Create and configure widget script
     const script = document.createElement('script');
     script.type = 'text/javascript';
     script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js';
@@ -40,14 +47,20 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
 
     script.innerHTML = JSON.stringify(widgetConfig);
     container.appendChild(script);
+    scriptRef.current = script;
 
     // Cleanup function
     return () => {
-      if (container && script) {
-        container.removeChild(script);
+      if (scriptRef.current && scriptRef.current.parentNode) {
+        scriptRef.current.parentNode.removeChild(scriptRef.current);
       }
     };
-  }, []); // Empty dependency array means this runs once on mount
+  }, [isAuthCodeRoute]);
+
+  // For auth-code routes, just render children without wrapper
+  if (isAuthCodeRoute) {
+    return <>{children}</>
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -128,8 +141,6 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       <div className="w-full lg:w-1/2 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 bg-gray-50 dark:bg-slate-900 bg-gradient-to-b to-gray-100 dark:to-slate-800">
         <div className="w-full max-w-md">
           {children}
-
-
         </div>
       </div>
     </div>

@@ -192,7 +192,7 @@ export default function LoginPage() {
             onVerificationRequired={() => {
               // when the user clicks "Verify Account Now" inside the form,
               // the form will call this, so you can navigate to OTP:
-              router.push("/auth/otp-verify")
+              router.push("/auth/auth-code/otp-verify")
             }}
           />
 

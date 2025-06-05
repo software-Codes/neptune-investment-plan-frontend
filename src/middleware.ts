@@ -5,10 +5,10 @@ import type { NextRequest } from "next/server";
 const publicRoutes = [
   "/auth/login",
   "/auth/register",
-  "/auth/otp-verify",
-  "/auth/reset-password",
-  "/auth/complete-recovery",
-  "/auth/verify-kyc",
+  "/auth/auth-code/otp-verify",
+  "/auth/auth-code/reset-password",
+  "/auth/auth-code/complete-recovery",
+  "/auth/auth-code/verify-kyc",
 ];
 
 const protectedRoutePatterns = [

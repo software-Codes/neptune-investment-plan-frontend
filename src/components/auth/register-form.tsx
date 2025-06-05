@@ -125,7 +125,7 @@ export function RegisterForm() {
         })
 
         // Navigate to OTP verification with query parameters as backup
-        router.push(`/auth/otp-verify?userId=${response.user.user_id}&email=${encodeURIComponent(response.user.email)}&method=${data.contactMethod}`)
+        router.push(`/auth/auth-code/otp-verify?userId=${response.user.user_id}&email=${encodeURIComponent(response.user.email)}&method=${data.contactMethod}`)
       } else {
         throw new Error(response.message || "Registration failed")
       }
@@ -281,22 +281,22 @@ export function RegisterForm() {
                         <div
                           key={level}
                           className={`h-2 flex-1 rounded-full transition-all duration-300 ${level <= passwordStrength.score
-                              ? passwordStrength.strength === 'strong'
-                                ? 'bg-emerald-500'
-                                : passwordStrength.strength === 'medium'
-                                  ? 'bg-yellow-500'
-                                  : 'bg-red-500'
-                              : 'bg-slate-200 dark:bg-slate-700'
+                            ? passwordStrength.strength === 'strong'
+                              ? 'bg-emerald-500'
+                              : passwordStrength.strength === 'medium'
+                                ? 'bg-yellow-500'
+                                : 'bg-red-500'
+                            : 'bg-slate-200 dark:bg-slate-700'
                             }`}
                         />
                       ))}
                     </div>
                     <div className="flex items-center justify-between">
                       <span className={`text-sm font-medium ${passwordStrength.strength === 'strong'
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : passwordStrength.strength === 'medium'
-                            ? 'text-yellow-600 dark:text-yellow-400'
-                            : 'text-red-600 dark:text-red-400'
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : passwordStrength.strength === 'medium'
+                          ? 'text-yellow-600 dark:text-yellow-400'
+                          : 'text-red-600 dark:text-red-400'
                         }`}>
                         {passwordStrength.strength === 'strong' && '🔒 Strong password'}
                         {passwordStrength.strength === 'medium' && '⚠️ Medium strength'}
