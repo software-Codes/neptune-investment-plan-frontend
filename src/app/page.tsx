@@ -22,6 +22,9 @@ export default function Page() {
          <DashboardSectionHomePage />
 
         <ChartAreaInteractive />
+        {/* <DashboardSectionHomePage /> */}
+
+        
        
       </main>
 
