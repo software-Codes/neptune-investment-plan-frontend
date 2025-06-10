@@ -1,6 +1,6 @@
 import React from 'react'
 
-const StatusBadge = () => {
+const StatusBadgeAdmin = () => {
   return (
     <div>
       
@@ -8,4 +8,4 @@ const StatusBadge = () => {
   )
 }
 
-export default StatusBadge
+export default StatusBadgeAdmin

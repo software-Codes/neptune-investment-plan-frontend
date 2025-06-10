@@ -13,7 +13,7 @@ const publicRoutes = [
 
 const protectedRoutePatterns = [
   // /<userId>/(dashboard|wallet|…)
-  /^\/[^/]+\/(dashboard|wallet|investments|transactions|referral)$/,
+  /^\/[^/]+\/dashboard|wallet|investments|transactions|referral|deposits|$/,
   // /admin/<adminId>/…
   /^\/admin\/[^/]+(\/.*)?$/,
 ];
