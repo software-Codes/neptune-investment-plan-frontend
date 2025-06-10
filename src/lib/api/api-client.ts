@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// lib/api-client.ts
+
 "use client";
 import axios, { AxiosError } from "axios";
 import {
@@ -25,26 +23,18 @@ import {
 } from "@/types/types";
 import { VerificationResponse } from "@/types/type";
 
-/**
- * Base URL for API requests
- * Falls back to localhost:4000 if NEXT_PUBLIC_API_URL is not set
- */
+
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-/**
- * Cookie configuration for token storage
- */
+
 const COOKIE_OPTIONS = {
   expires: 7, // 7 days
   secure: process.env.NODE_ENV === "production",
   sameSite: "strict" as const,
 };
 
-/**
- * Axios instance with default configuration
- * Includes authorization token handling and error interceptors
- */
+
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000, // Increased timeout for slower connections
@@ -55,19 +45,13 @@ const axiosInstance = axios.create({
   },
 });
 
-/**
- * Helper function to get the authentication token from multiple sources
- * Checks both localStorage and cookies for compatibility with middleware
- */
+
 const getAuthToken = (): string | null => {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("token") || Cookies.get("auth-token") || null;
 };
 
-/**
- * Request interceptor
- * Adds authentication token to requests if available
- */
+
 axiosInstance.interceptors.request.use((config) => {
   const token = getAuthToken();
   if (token) {
@@ -76,11 +60,6 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
-/**
- * Response interceptor
- * Handles common error cases and transforms error responses
- */
-// Update the response interceptor in the axiosInstance configuration
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
@@ -708,9 +687,9 @@ export const authApi = {
 
       // Transform the response to match KYCDocument interface
       const kycDocument: KYCDocument = {
-        document_id: response.data.document.id,
+        document_id: response.data.document.document_id,
         user_id: "", // This will be filled by the backend
-        document_type: response.data.document.type,
+        document_type: response.data.document.document_type,
         document_country: documentCountry,
         verification_status: DocumentVerificationStatus.PENDING,
         blob_storage_url: response.data.document.blob_storage_url,

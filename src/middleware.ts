@@ -85,5 +85,5 @@ export const config = {
   matcher: [
     // match all except Next internals & API
     "/((?!api|_next/static|_next/image|_next/data|favicon.ico).*)",
-  ],
+  ],  
 };

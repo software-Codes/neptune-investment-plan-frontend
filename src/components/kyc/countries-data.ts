@@ -108,4 +108,9 @@ export const countries: Country[] = [
     { code: "HT", name: "Haiti", flag: "🇭🇹" },
     { code: "HU", name: "Hungary", flag: "🇭🇺" },
     { code: "ID", name: "Indonesia", flag: "🇮🇩" },
+    { code: "IE", name: "Ireland", flag: "🇮🇪" },
+    { code: "IL", name: "Israel", flag: "🇮🇱" },
+    { code: "IM", name: "Isle of Man", flag: "🇮🇲"
+      
+     }
 ]
