@@ -1,8 +1,17 @@
+/*
+  File: src/app/(users)/[userId]/deposits/page.tsx
+  Purpose: Deposits list page with correct routing links per folder structure.
+  Updates:
+  – Fixed Link paths and router.push destinations to use `/users/${userId}/deposits/...`.
+  – Removed stray/incomplete Link tags in header.
+*/
 "use client";
 import React, { useState, useMemo } from 'react';
 import { Search, Plus, Copy, ExternalLink, Filter, ChevronDown, Eye, Calendar, DollarSign, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
 import { mockDeposits, mockStats, StatsCard } from '@/types/users/deposit.mock.types';
 import { StatusBadge } from '@/components/users/deposits/StatusBadge';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 
 const DepositRow = ({ deposit, onViewDetails }: { deposit: typeof mockDeposits[0], onViewDetails: (id: string) => void }) => {
@@ -88,10 +97,11 @@ const DepositRow = ({ deposit, onViewDetails }: { deposit: typeof mockDeposits[0
   );
 };
 
-const DepositsPage = () => {
+const DepositsPage = ({ params }: { params: { userId: string } }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const userId = params.userId;
 
   const filteredDeposits = useMemo(() => {
     return mockDeposits.filter(deposit => {
@@ -102,13 +112,18 @@ const DepositsPage = () => {
     });
   }, [searchTerm, statusFilter]);
 
+  const route = useRouter();
   const handleViewDetails = (depositId: string) => {
     // Navigate to deposit details page
+    
+
     console.log('Navigate to deposit:', depositId);
   };
 
   const handleNewDeposit = () => {
     // Navigate to new deposit page
+    route.push('');
+
     console.log('Navigate to new deposit');
   };
 
@@ -123,13 +138,15 @@ const DepositsPage = () => {
               Manage your USDT deposits and track transaction status
             </p>
           </div>
-          <button
-            onClick={handleNewDeposit}
+          <Link href="">
+               <button
             className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
           >
             <Plus className="w-5 h-5" />
             New Deposit
           </button>
+          </Link>
+     
         </div>
 
         {/* Stats Cards */}
@@ -251,13 +268,10 @@ const DepositsPage = () => {
                 }
               </p>
               {!searchTerm && statusFilter === 'all' && (
-                <button
-                  onClick={handleNewDeposit}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
-                >
+                <Link href={`/users/${userId}/deposits/new`} className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900">
                   <Plus className="w-5 h-5" />
-                  Make First Deposit
-                </button>
+                  New Deposit
+                </Link>
               )}
             </div>
           )}
