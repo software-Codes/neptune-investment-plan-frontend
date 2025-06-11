@@ -10,7 +10,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/login');
+      // Ensure redirects point to the correct login route
+      router.push('/pages/auth/login');
     }
   }, [user, isLoading, router]);
 
