@@ -67,35 +67,35 @@ Help Section - Common issues and solutions
 Live Chat Support - For immediate assistance
 Previous Deposits Reference - Show last successful deposit for guidance
 
-3. Single Deposit Detail Page (/users/[userId]/deposits/[depositId]/page.tsx)
-Detailed Information
+    3. Single Deposit Detail Page (/users/[userId]/deposits/[depositId]/page.tsx)
+    Detailed Information
 
-Deposit Overview Card
+    Deposit Overview Card
 
-Amount and currency
-Current status with visual indicator
-Creation date and time
-Estimated completion time
-
-
-Transaction Details
-
-Transaction hash with copy button
-Blockchain explorer link
-Network used (TRC20)
-Confirmations count
-Block height information
+    Amount and currency
+    Current status with visual indicator
+    Creation date and time
+    Estimated completion time
 
 
-Status Timeline
+    Transaction Details
 
-Visual timeline showing:
+    Transaction hash with copy button
+    Blockchain explorer link
+    Network used (TRC20)
+    Confirmations count
+    Block height information
 
-Deposit initiated
-Transaction hash submitted
-Blockchain confirmation
-Admin verification
-Funds credited
+
+    Status Timeline
+
+    Visual timeline showing:
+
+    Deposit initiated
+    Transaction hash submitted
+    Blockchain confirmation
+    Admin verification
+    Funds credited
 
 
 

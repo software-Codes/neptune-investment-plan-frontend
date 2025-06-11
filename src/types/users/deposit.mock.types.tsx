@@ -38,6 +38,25 @@ export const mockDeposits = [
     confirmedAt: "2024-06-07T17:00:00Z",
     network: "TRC20",
   },
+
+    {
+    id: "dep_004",
+    amount: 50.0,
+    transactionHash: "0x5555666677778888999900001111222233334444",
+    status: "confirmed",
+    createdAt: "2024-06-07T16:45:00Z",
+    confirmedAt: "2024-06-07T17:00:00Z",
+    network: "TRC20",
+  },
+    {
+    id: "dep_004",
+    amount: 50.0,
+    transactionHash: "0x5555666677778888999900001111222233334444",
+    status: "confirmed",
+    createdAt: "2024-06-07T16:45:00Z",
+    confirmedAt: "2024-06-07T17:00:00Z",
+    network: "TRC20",
+  },
 ];
 export const mockStats = {
   totalDeposited: 475.5,
