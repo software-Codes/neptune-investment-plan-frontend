@@ -81,3 +81,19 @@ export interface AccountCompletionStatus {
   investmentPreferencesSet: boolean;
   overallCompletion: number;
 }
+export interface Deposit {
+  id: string
+  userId: string
+  amount: number
+  currency: string
+  status: 'pending' | 'confirmed' | 'failed'
+  createdAt: string
+  estimatedCompletion?: string
+  txHash?: string
+  network: string
+  confirmations: number
+  blockHeight: number
+  confirmationTimestamp?: string
+  creditedAmount?: number
+  failureReason?: string
+}
