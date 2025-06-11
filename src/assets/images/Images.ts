@@ -1,0 +1,1 @@
+export {default as NeptuneLogo} from './photo_2025-05-13_14-50-28.jpg';

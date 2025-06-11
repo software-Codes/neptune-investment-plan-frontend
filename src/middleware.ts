@@ -1,69 +1,89 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+// src/middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Define public routes that don't require authentication
 const publicRoutes = [
-  "/pages/auth/login",
-  "/pages/auth/register",
-  "/pages/auth/forgot-password",
+  "/auth/login",
+  "/auth/register",
+  "/auth/auth-code/otp-verify",
+  "/auth/auth-code/reset-password",
+  "/auth/auth-code/complete-recovery",
+  "/auth/auth-code/verify-kyc",
 ];
 
-export async function middleware(request: NextRequest) {
-  const token = request.cookies.get("token")?.value;
+const protectedRoutePatterns = [
+  // /<userId>/(dashboard|wallet|…)
+  /^\/[^/]+\/dashboard|wallet|investments|transactions|referral|deposits|$/,
+  // /admin/<adminId>/…
+  /^\/admin\/[^/]+(\/.*)?$/,
+];
+
+const LOGIN_ROUTE = "/auth/login";
+const HOME_ROUTE = "/";
+
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const authToken = request.cookies.get("auth-token")?.value;
+  const userId = request.cookies.get("user-id")?.value;
 
-  // Allow access to public routes without authentication
-  if (publicRoutes.includes(pathname)) {
-    // If user is already authenticated, redirect to dashboard
-    if (token) {
-      return NextResponse.redirect(new URL("/pages/user/dashboard", request.url));
+  // 1. Allow Next internals, assets, API
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/static") ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next();
+  }
+  //root path
+  if (pathname === HOME_ROUTE) {
+    if (!authToken) {
+      return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
+    }
+
+    // If coming from dashboard, allow access to home
+    if (request.nextUrl.searchParams.get("from") === "dashboard") {
+      return NextResponse.next();
+    }
+
+    // If user has ID but not coming from dashboard, redirect to dashboard
+    if (userId) {
+      const dashboardUrl = new URL(`/${userId}/dashboard`, request.url);
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    // Fallback to login if something is wrong
+    return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
+  }
+
+  // 3. Public routes
+  if (publicRoutes.some((r) => pathname.startsWith(r))) {
+    // Push logged-in users away from /auth pages
+    if (authToken && userId && pathname.startsWith("/auth")) {
+      return NextResponse.redirect(
+        new URL(`/${userId}/dashboard`, request.url)
+      );
     }
     return NextResponse.next();
   }
-  // Check if user is authenticated for protected routes
-  if (!token) {
-    // Redirect to login page and store the original url as a query parameter
-    const loginUrl = new URL("/pages/auth/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-  try {
-    // Verify token on protected routes
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
 
-    if (!response.ok) {
-      throw new Error("Token verification failed");
+  // 4. Protected routes
+  if (protectedRoutePatterns.some((rx) => rx.test(pathname))) {
+    if (!authToken) {
+      const loginUrl = new URL(LOGIN_ROUTE, request.url);
+      loginUrl.searchParams.set("redirectTo", pathname);
+      return NextResponse.redirect(loginUrl);
     }
-
     return NextResponse.next();
-  } catch (error) {
-    // If token verification fails, clear the token and redirect to login
-    const response = NextResponse.redirect(new URL("/login", request.url));
-    response.cookies.delete("token");
-    return response;
   }
 
+  // // 5. Fallback to home
+  return NextResponse.redirect(new URL(HOME_ROUTE, request.url));
 }
 
-// Configure which routes should be handled by the middleware
 export const config = {
   matcher: [
-    /*
-     * Match all routes except:
-     * 1. /api routes
-     * 2. /_next (Next.js internals)
-     * 3. /static (static files)
-     * 4. /_vercel (Vercel internals)
-     * 5. All files in the public folder
-     */
-    '/((?!api|_next|_vercel|static|.*\\..*).*)',
-  ],
+    // match all except Next internals & API
+    "/((?!api|_next/static|_next/image|_next/data|favicon.ico).*)",
+  ],  
 };

@@ -41,7 +41,7 @@ export default function RootLayout({
         />
             
           </AuthProvider>
-          <MouseMoveEffect />
+          {/* <MouseMoveEffect /> */}
 
         </ThemeProvider>
       </body>

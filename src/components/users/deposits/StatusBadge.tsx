@@ -1,12 +1,12 @@
-import { getStatusConfig } from '@/types/users/deposit.mock.types'
+import { getStatusConfig } from "@/types/users/deposit.mock.types";
 
 export type StatusBadgeProps = {
-  status: string
-}
+  status: string;
+};
 
 export const StatusBadge = ({ status }: StatusBadgeProps) => {
-  const config = getStatusConfig(status)
-  const Icon = config.icon
+  const config = getStatusConfig(status);
+  const Icon = config.icon;
 
   return (
     <span
@@ -15,5 +15,5 @@ export const StatusBadge = ({ status }: StatusBadgeProps) => {
       <Icon className="w-3.5 h-3.5" />
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
-  )
-}
+  );
+};
