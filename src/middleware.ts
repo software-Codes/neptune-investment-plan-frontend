@@ -46,7 +46,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   } catch (error) {
     // If token verification fails, clear the token and redirect to login
-    const response = NextResponse.redirect(new URL("/login", request.url));
+    // Redirect unauthenticated users to the correct login route
+    const response = NextResponse.redirect(new URL("/pages/auth/login", request.url));
     response.cookies.delete("token");
     return response;
   }

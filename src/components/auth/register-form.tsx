@@ -260,8 +260,8 @@ export function RegisterForm({ className, onSubmit, ...props }: RegisterFormProp
 
       <div className="text-center text-sm text-emerald-600/80">
         Already have an account?{" "}
-        <a
-          href="/auth/login"
+          <a
+            href="/pages/auth/login"
           className="text-emerald-600 font-medium hover:text-emerald-700 underline underline-offset-4"
         >
           Sign in

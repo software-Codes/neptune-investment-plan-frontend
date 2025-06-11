@@ -181,7 +181,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
             toast.error('An error occurred during logout, but you have been logged out locally');
         } finally {
             handleLogout();
-            router.push('/login');
+            // Redirect to the login page within the auth pages directory
+            router.push('/pages/auth/login');
             setIsLoading(false);
         }
     };
