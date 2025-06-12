@@ -139,11 +139,6 @@ declare module '@/types/type' {
   }
 
   export interface AccountCompletionStatus {
-    personalInfoComplete: boolean;
-    identityVerified: boolean;
-    bankingDetailsComplete: boolean;
-    investmentPreferencesSet: boolean;
-    overallCompletion: number;
     basicVerified: boolean;
     documentsSubmitted: boolean;
     accountComplete: boolean;
@@ -172,11 +167,6 @@ declare module '@/types/type' {
     requiresVerification?: boolean;
     userId?: string;
     preferredContactMethod?: ContactMethod;
-    statusCode?: number;
-    isNetworkError?: boolean;
-    isServerError?: boolean;
-    isClientError?: boolean;
-    errorDetails?: any;
   }
 
   export interface APIResponse<T = any> {
@@ -298,23 +288,5 @@ declare module '@/types/type' {
     lastAttempt?: Date;
     cooldownPeriod?: number;
     returnUrl?: string;
-  }
-
-  // Deposit interface from the first branch
-  export interface Deposit {
-    id: string;
-    userId: string;
-    amount: number;
-    currency: string;
-    status: 'pending' | 'confirmed' | 'failed';
-    createdAt: string;
-    estimatedCompletion?: string;
-    txHash?: string;
-    network: string;
-    confirmations: number;
-    blockHeight: number;
-    confirmationTimestamp?: string;
-    creditedAmount?: number;
-    failureReason?: string;
   }
 }

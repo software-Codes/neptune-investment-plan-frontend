@@ -1,6 +1,6 @@
 import { getStatusConfig } from "@/types/users/deposit.mock.types";
 
-export type StatusBadgeProps = {
+ export type StatusBadgeProps = {
   status: string;
 };
 

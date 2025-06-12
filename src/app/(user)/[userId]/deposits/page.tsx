@@ -1,35 +1,67 @@
-/*
-  File: src/app/(users)/[userId]/deposits/page.tsx
-  Purpose: Deposits list page with correct routing links per folder structure.
-  Updates:
-  – Fixed Link paths and router.push destinations to use `/users/${userId}/deposits/...`.
-  – Removed stray/incomplete Link tags in header.
-*/
 "use client";
-import React, { useState, useMemo } from 'react';
-import { Search, Plus, Copy, ExternalLink, Filter, ChevronDown, Eye, Calendar, DollarSign, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
-import { mockDeposits, mockStats, StatsCard } from '@/types/users/deposit.mock.types';
-import { StatusBadge } from '@/components/users/deposits/StatusBadge';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import React, { useState, useMemo } from "react";
+import { 
+  Search, 
+  Plus, 
+  Copy, 
+  ExternalLink, 
+  Filter, 
+  ChevronDown, 
+  CheckCircle,
+  Clock,
+  XCircle,
+  AlertCircle,
+  Loader2
+} from "lucide-react";
+import { Deposit, DepositStatus } from "@/types/deposits.types";
+import { getStatusConfig, mockDeposits } from "@/types/users/deposit.mock.types";
+import { useRouter } from "next/navigation";
 
 
-const DepositRow = ({ deposit, onViewDetails }: { deposit: typeof mockDeposits[0], onViewDetails: (id: string) => void }) => {
+
+// StatusBadge Component
+const StatusBadge = ({ status }: { status: DepositStatus }) => {
+  const config = getStatusConfig(status);
+  const Icon = config.icon;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}
+    >
+      <Icon className="w-3.5 h-3.5" />
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+};
+
+// DepositRow Component
+function DepositRow({ deposit, onView }: { deposit: Deposit; onView: (id: string) => void }) {
   const [copied, setCopied] = useState(false);
+  const [copyLoading, setCopyLoading] = useState(false);
 
-  const copyToClipboard = async (text: string) => {
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!deposit.txHash || copyLoading) return;
+    
+    setCopyLoading(true);
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(deposit.txHash);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy: ', err);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    } finally {
+      setCopyLoading(false);
     }
   };
 
+  const handleExternalLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-KE', {
-      year: 'numeric',  
+    return new Date(dateString).toLocaleString("en-KE", {
+      year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -38,265 +70,244 @@ const DepositRow = ({ deposit, onViewDetails }: { deposit: typeof mockDeposits[0
   };
 
   const truncateHash = (hash: string) => {
-    return `${hash.slice(0, 8)}...${hash.slice(-8)}`;
+    return `${hash.slice(0, 8)}...${hash.slice(-6)}`;
   };
 
   return (
-    <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 hover:shadow-md transition-shadow">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex-1 space-y-2">
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">
-              ${deposit.amount.toFixed(2)} USDT
-            </span>
-            <StatusBadge status={deposit.status} />
-          </div>
-
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <Calendar className="w-4 h-4" />
-            {formatDate(deposit.createdAt)}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-              {truncateHash(deposit.transactionHash)}
-            </span>
-            <button
-              onClick={() => copyToClipboard(deposit.transactionHash)}
-              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              title="Copy transaction hash"
-            >
-              <Copy className="w-3 h-3 text-gray-400" />
-            </button>
-            <button
-              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              title="View on blockchain explorer"
-            >
-              <ExternalLink className="w-3 h-3 text-gray-400" />
-            </button>
-          </div>
+    <div
+      onClick={() => onView(deposit.id)}
+      className="group bg-card border border-border rounded-lg p-4 hover:shadow-md hover:border-primary/50 cursor-pointer transition-all duration-200"
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex flex-col">
+          <span className="text-lg font-semibold text-foreground">
+            ${deposit.amount.toLocaleString()} USDT
+          </span>
+          <span className="text-xs text-muted-foreground mt-1">
+            {deposit.network}
+          </span>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onViewDetails(deposit.id)}
-            className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-          >
-            <Eye className="w-4 h-4" />
-            View Details
-          </button>
-        </div>
+        <StatusBadge status={deposit.status} />
       </div>
 
-      {copied && (
-        <div className="mt-2 text-xs text-green-600 dark:text-green-400">
-          Transaction hash copied!
+      {/* Date */}
+      <p className="text-sm text-muted-foreground mb-3">
+        {formatDate(deposit.createdAt)}
+      </p>
+
+      {/* Transaction Hash */}
+      {deposit.txHash && (
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-mono text-muted-foreground">
+            {truncateHash(deposit.txHash)}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleCopy}
+              disabled={copyLoading}
+              className="p-1 hover:bg-muted rounded transition-colors"
+              title="Copy transaction hash"
+            >
+              {copyLoading ? (
+                <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+              ) : (
+                <Copy className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+              )}
+            </button>
+            <a
+              href={`https://tronscan.io/#/transaction/${deposit.txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={handleExternalLink}
+              className="p-1 hover:bg-muted rounded transition-colors"
+              title="View on Tronscan"
+            >
+              <ExternalLink className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+            </a>
+          </div>
+          {copied && (
+            <span className="text-primary text-xs font-medium animate-fade-in">
+              Copied!
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Failure Reason */}
+      {deposit.status === 'failed' && deposit.failureReason && (
+        <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-400">
+          {deposit.failureReason}
+        </div>
+      )}
+
+      {/* Confirmations */}
+      {deposit.status === 'pending' && (
+        <div className="mt-2 text-xs text-muted-foreground">
+          {deposit.confirmations} confirmation{deposit.confirmations !== 1 ? 's' : ''}
         </div>
       )}
     </div>
   );
-};
+}
 
-const DepositsPage = ({ params }: { params: { userId: string } }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const userId = params.userId;
+// Main Component
+export default function DepositsPage() {
+  const router = useRouter();
+  const userId = "user_123"; // Mock user ID
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | DepositStatus>("all");
+  const [isLoading] = useState(false); // Simulate loading state
 
+  // Filter deposits
   const filteredDeposits = useMemo(() => {
-    return mockDeposits.filter(deposit => {
-      const matchesSearch = deposit.transactionHash.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        deposit.amount.toString().includes(searchTerm);
-      const matchesStatus = statusFilter === 'all' || deposit.status === statusFilter;
-      return matchesSearch && matchesStatus;
+    return mockDeposits.filter((deposit) => {
+      const matchesStatus = statusFilter === "all" || deposit.status === statusFilter;
+      const matchesSearch = 
+        deposit.txHash?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        deposit.amount.toString().includes(searchTerm) ||
+        deposit.id.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return matchesStatus && matchesSearch;
     });
   }, [searchTerm, statusFilter]);
 
-  const route = useRouter();
-  const handleViewDetails = (depositId: string) => {
-    // Navigate to deposit details page
+  // Calculate stats
+  const stats = useMemo(() => {
+    const totalDeposited = mockDeposits
+      .filter(d => d.status === "confirmed")
+      .reduce((sum, d) => sum + d.amount, 0);
     
+    const pendingCount = mockDeposits.filter(d => d.status === "pending").length;
+    const confirmedCount = mockDeposits.filter(d => d.status === "confirmed").length;
+    const failedCount = mockDeposits.filter(d => d.status === "failed").length;
 
-    console.log('Navigate to deposit:', depositId);
+    return { totalDeposited, pendingCount, confirmedCount, failedCount };
+  }, []);
+
+  const handleViewDeposit = (depositId: string) => {
+    console.log('Viewing deposit:', depositId);
+    router.push(`/${userId}/deposits/${depositId}`)
   };
 
   const handleNewDeposit = () => {
-    // Navigate to new deposit page
-    route.push('');
+    console.log('Creating new deposit');
+    router.push(`/${userId}/deposits/new`)
+  };
 
-    console.log('Navigate to new deposit');
+  const nextFilterStatus = () => {
+    if (statusFilter === "all") return "pending";
+    if (statusFilter === "pending") return "confirmed";
+    if (statusFilter === "confirmed") return "failed";
+    return "all";
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Deposits</h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              Manage your USDT deposits and track transaction status
-            </p>
-          </div>
-          <Link href="">
-               <button
-            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
-          >
-            <Plus className="w-5 h-5" />
-            New Deposit
-          </button>
-          </Link>
-     
+    <div className="container mx-auto px-4 py-8 space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Deposits</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your USDT deposits and track transaction status
+          </p>
         </div>
+        <button 
+          onClick={handleNewDeposit}
+          className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-medium transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Deposit
+        </button>
+      </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatsCard
-            title="Total Deposited"
-            value={`$${mockStats.totalDeposited.toFixed(2)}`}
-            subtitle="USDT"
-            icon={DollarSign}
-            variant="primary"
-          />
-          <StatsCard
-            title="Successful Deposits"
-            value={mockStats.successfulDeposits}
-            subtitle="Confirmed transactions"
-            icon={CheckCircle}
-            variant="success"
-          />
-          <StatsCard
-            title="Pending Deposits"
-            value={mockStats.pendingDeposits}
-            subtitle="Awaiting confirmation"
-            icon={Clock}
-            variant="warning"
-          />
-          <StatsCard
-            title="Average Amount"
-            value={`$${mockStats.averageAmount.toFixed(2)}`}
-            subtitle="Per deposit"
-            icon={DollarSign}
-          />
-            <StatsCard
-            title="Average Amount"
-            value={`$${mockStats.averageAmount.toFixed(2)}`}
-            subtitle="Per deposit"
-            icon={DollarSign}
-          />
-               <StatsCard
-            title="Successful Deposits"
-            value={mockStats.successfulDeposits}
-            subtitle="Confirmed transactions"
-            icon={CheckCircle}
-            variant="success"
-          />
-           <StatsCard
-            title="Pending Deposits"
-            value={mockStats.pendingDeposits}
-            subtitle="Awaiting confirmation"
-            icon={Clock}
-            variant="warning"
-          />
-
-        </div>
-
-        {/* Search and Filter */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by transaction hash or amount..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="text-2xl font-bold text-foreground">
+            ${stats.totalDeposited.toLocaleString()}
           </div>
-
-          <div className="relative">
-            <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
-            >
-              <Filter className="w-4 h-4" />
-              Status: {statusFilter === 'all' ? 'All' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
-              <ChevronDown className="w-4 h-4" />
-            </button>
-
-            {isFilterOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10">
-                <div className="py-1">
-                  {['all', 'confirmed', 'pending', 'failed'].map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => {
-                        setStatusFilter(status);
-                        setIsFilterOpen(false);
-                      }}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      {status === 'all' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <div className="text-sm text-muted-foreground">Total Deposited</div>
         </div>
-
-        {/* Deposits List */}
-        <div className="space-y-4">
-          {filteredDeposits.length > 0 ? (
-            filteredDeposits.map((deposit) => (
-              <DepositRow
-                key={deposit.id}
-                deposit={deposit}
-                onViewDetails={handleViewDetails}
-              />
-            ))
-          ) : (
-            <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No deposits found
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {searchTerm || statusFilter !== 'all'
-                  ? 'Try adjusting your search or filter criteria.'
-                  : 'Start by making your first deposit to begin investing.'
-                }
-              </p>
-              {!searchTerm && statusFilter === 'all' && (
-                <Link href={`/users/${userId}/deposits/new`} className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900">
-                  <Plus className="w-5 h-5" />
-                  New Deposit
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Quick Info */}
-        <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-                Important Information
-              </p>
-              <ul className="text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• Minimum deposit amount: $10 USDT</li>
-                <li>• Only TRC20 network is supported</li>
-                <li>• Deposits are usually confirmed within 10-30 minutes</li>
-                <li>• Always double-check the deposit address before sending</li>
-              </ul>
-            </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="text-2xl font-bold text-green-600">
+            {stats.confirmedCount}
           </div>
+          <div className="text-sm text-muted-foreground">Confirmed</div>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="text-2xl font-bold text-yellow-600">
+            {stats.pendingCount}
+          </div>
+          <div className="text-sm text-muted-foreground">Pending</div>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-4">
+          <div className="text-2xl font-bold text-red-600">
+            {stats.failedCount}
+          </div>
+          <div className="text-sm text-muted-foreground">Failed</div>
         </div>
       </div>
+
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            className="w-full pl-10 pr-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all"
+            placeholder="Search by hash, amount, or ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <button
+          onClick={() => setStatusFilter(nextFilterStatus())}
+          className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
+        >
+          <Filter className="w-4 h-4" />
+          Status: {statusFilter}
+          <ChevronDown className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {/* Deposits Grid */}
+      {!isLoading && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredDeposits.map((deposit) => (
+            <DepositRow 
+              key={deposit.id} 
+              deposit={deposit} 
+              onView={handleViewDeposit}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && filteredDeposits.length === 0 && (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+            <Search className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-medium text-foreground mb-2">
+            No deposits found
+          </h3>
+          <p className="text-muted-foreground">
+            {searchTerm || statusFilter !== "all" 
+              ? "Try adjusting your search or filter criteria"
+              : "Create your first deposit to get started"
+            }
+          </p>
+        </div>
+      )}
     </div>
   );
-};
-
-export default DepositsPage;
+}
