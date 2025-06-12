@@ -189,6 +189,8 @@ export interface APIResponse<T = any> {
   message?: string;
   data?: T;
   error?: string;
+  cooldownPeriod?: number;
+    returnUrl?: string;
 }
 
 /**
@@ -393,3 +395,23 @@ export interface AuthContextType {
     required: boolean;
   }>;
 }
+
+  export interface AccountCompletionStatus {
+    personalInfoComplete: boolean;
+    identityVerified: boolean;
+    bankingDetailsComplete: boolean;
+    investmentPreferencesSet: boolean;
+    overallCompletion: number;
+    basicVerified: boolean;
+    documentsSubmitted: boolean;
+    accountComplete: boolean;
+    requiresVerification?: boolean;
+    userId?: string;
+    preferredContactMethod?: ContactMethod;
+    statusCode?: number;
+    isNetworkError?: boolean;
+    isServerError?: boolean;
+    isClientError?: boolean;
+    errorDetails?: any;
+  }
+

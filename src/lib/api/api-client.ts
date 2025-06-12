@@ -643,14 +643,16 @@ export const authApi = {
         })),
         accountCompletion: {
           basicVerified: response.data.accountCompletion.basicVerified,
-          documentsSubmitted:
-            response.data.accountCompletion.documentsSubmitted,
+          documentsSubmitted: response.data.accountCompletion.documentsSubmitted,
           accountComplete: response.data.accountCompletion.accountComplete,
           requiredDocuments: response.data.accountCompletion.requiredDocuments,
-          submittedDocuments:
-            response.data.accountCompletion.submittedDocuments,
-          completionPercentage:
-            response.data.accountCompletion.completionPercentage,
+          submittedDocuments: response.data.accountCompletion.submittedDocuments,
+          completionPercentage: response.data.accountCompletion.completionPercentage,
+          personalInfoComplete: false,
+          identityVerified: false,
+          bankingDetailsComplete: false,
+          investmentPreferencesSet: false,
+          overallCompletion: 0
         },
       };
 
