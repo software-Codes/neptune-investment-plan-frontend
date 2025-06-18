@@ -1,10 +1,11 @@
+import WalletBalancesCard from '@/components/ui/WalletBalancesCard'
 import React from 'react'
 
 const UserWalletPage = () => {
   return (
     <div>
       <h1>Wallet</h1>
-      <p>This is a description of the wallet.</p>
+      {/* <WalletBalancesCard wallets={[]} onTransfer={() => {}} /> */}
     </div>
   )
 }

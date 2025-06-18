@@ -5,26 +5,26 @@ import type { NextRequest } from "next/server";
 const publicRoutes = [
   "/auth/login",
   "/auth/register",
-  "/auth/otp-verify",
-  "/auth/reset-password",
-  "/auth/complete-recovery",
-  "/auth/verify-kyc",
+  "/auth/auth-code/otp-verify",
+  "/auth/auth-code/reset-password",
+  "/auth/auth-code/complete-recovery",
+  "/auth/auth-code/verify-kyc",
 ];
 
 const protectedRoutePatterns = [
   // /<userId>/(dashboard|wallet|…)
-  /^\/[^/]+\/(dashboard|wallet|investments|transactions|referral)$/,
+  /^\/[^/]+\/dashboard|wallet|investments|transactions|referral|deposits|$/,
   // /admin/<adminId>/…
   /^\/admin\/[^/]+(\/.*)?$/,
 ];
 
 const LOGIN_ROUTE = "/auth/login";
-const HOME_ROUTE  = "/";
+const HOME_ROUTE = "/";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authToken = request.cookies.get("auth-token")?.value;
-  const userId    = request.cookies.get("user-id")?.value;
+  const userId = request.cookies.get("user-id")?.value;
 
   // 1. Allow Next internals, assets, API
   if (
@@ -35,32 +35,34 @@ export function middleware(request: NextRequest) {
   ) {
     return NextResponse.next();
   }
-//root path
-if (pathname === HOME_ROUTE) {
-  if (!authToken) {
+  //root path
+  if (pathname === HOME_ROUTE) {
+    if (!authToken) {
+      return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
+    }
+
+    // If coming from dashboard, allow access to home
+    if (request.nextUrl.searchParams.get("from") === "dashboard") {
+      return NextResponse.next();
+    }
+
+    // If user has ID but not coming from dashboard, redirect to dashboard
+    if (userId) {
+      const dashboardUrl = new URL(`/${userId}/dashboard`, request.url);
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    // Fallback to login if something is wrong
     return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
   }
-  
-  // If coming from dashboard, allow access to home
-  if (request.nextUrl.searchParams.get('from') === 'dashboard') {
-    return NextResponse.next();
-  }
-
-  // If user has ID but not coming from dashboard, redirect to dashboard
-  if (userId) {
-    const dashboardUrl = new URL(`/${userId}/dashboard`, request.url);
-    return NextResponse.redirect(dashboardUrl);
-  }
-
-  // Fallback to login if something is wrong
-  return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
-}
 
   // 3. Public routes
   if (publicRoutes.some((r) => pathname.startsWith(r))) {
     // Push logged-in users away from /auth pages
     if (authToken && userId && pathname.startsWith("/auth")) {
-      return NextResponse.redirect(new URL(`/${userId}/dashboard`, request.url));
+      return NextResponse.redirect(
+        new URL(`/${userId}/dashboard`, request.url)
+      );
     }
     return NextResponse.next();
   }
@@ -75,7 +77,7 @@ if (pathname === HOME_ROUTE) {
     return NextResponse.next();
   }
 
-  // 5. Fallback to home
+  // // 5. Fallback to home
   return NextResponse.redirect(new URL(HOME_ROUTE, request.url));
 }
 
@@ -83,5 +85,5 @@ export const config = {
   matcher: [
     // match all except Next internals & API
     "/((?!api|_next/static|_next/image|_next/data|favicon.ico).*)",
-  ],
+  ],  
 };

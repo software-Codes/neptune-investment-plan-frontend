@@ -23,7 +23,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { authApi } from "@/lib/api/api-client"
 import { ContactMethod, RegistrationData } from "@/types/types"
 import { Alert, AlertDescription } from "../ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Eye, EyeOff, User, Mail, Phone, Lock, MessageSquare } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 
 const phoneRegex = /^\+?[1-9]\d{7,14}$/
@@ -34,24 +34,24 @@ const registerFormSchema = z.object({
     .max(50, "Name cannot exceed 50 characters")
     .regex(/^[a-zA-Z\s\-'\.]+$/, "Name can only contain letters, spaces, hyphens, and apostrophes")
     .refine((name) => name.trim().split(' ').length >= 2, "Please enter your first and last name"),
-  
+
   email: z.string()
     .email("Please enter a valid email address")
     .max(100, "Email cannot exceed 100 characters")
     .toLowerCase(),
-  
+
   phoneNumber: z.string()
     .regex(phoneRegex, "Please enter a valid phone number (e.g., +1234567890)")
     .min(8, "Phone number is too short")
     .max(18, "Phone number is too long"),
-  
+
   password: z.string()
     .min(8, "Password must be at least 8 characters")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[0-9]/, "Password must contain at least one number")
     .regex(/[!@#$%^&*(),.?":{}|<>]/, "Password must contain at least one special character"),
-  
+
   contactMethod: z.enum(["email", "phone"], {
     required_error: "Please select a contact method",
   })
@@ -125,7 +125,7 @@ export function RegisterForm() {
         })
 
         // Navigate to OTP verification with query parameters as backup
-        router.push(`/auth/otp-verify?userId=${response.user.user_id}&email=${encodeURIComponent(response.user.email)}&method=${data.contactMethod}`)
+        router.push(`/auth/auth-code/otp-verify?userId=${response.user.user_id}&email=${encodeURIComponent(response.user.email)}&method=${data.contactMethod}`)
       } else {
         throw new Error(response.message || "Registration failed")
       }
@@ -133,7 +133,7 @@ export function RegisterForm() {
       console.error("Registration error:", error)
       const errorMessage = error.response?.data?.message || error.message
       setError(errorMessage)
-      
+
       toast.dismiss(loadingToast)
       toast.error("Registration Failed", {
         description: errorMessage,
@@ -151,7 +151,7 @@ export function RegisterForm() {
     if (/[a-z]/.test(password)) score++
     if (/[0-9]/.test(password)) score++
     if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++
-    
+
     return {
       score,
       strength: score < 3 ? 'weak' : score < 5 ? 'medium' : 'strong'
@@ -162,34 +162,35 @@ export function RegisterForm() {
   const passwordStrength = watchedPassword ? getPasswordStrength(watchedPassword) : null
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {error && (
-        <Alert className="border-red-200 bg-red-50">
-          <AlertCircle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-700">{error}</AlertDescription>
+        <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <AlertDescription className="text-red-700 dark:text-red-300">{error}</AlertDescription>
         </Alert>
       )}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
           {/* Full Name */}
           <FormField
             control={form.control}
             name="fullName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-emerald-800 flex items-center gap-2">
+                <FormLabel className="text-slate-700 dark:text-slate-300 flex items-center gap-2 font-medium">
+                  <User className="w-4 h-4" />
                   Full Name
                 </FormLabel>
                 <FormControl>
                   <Input
                     {...field}
                     placeholder="John Doe"
-                    className="h-11 text-black border-emerald-200 focus:border-emerald-400 focus:ring-emerald-200"
+                    className="h-12 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:border-emerald-500 focus:ring-emerald-200 dark:focus:border-emerald-400 dark:focus:ring-emerald-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
                     disabled={isLoading}
                   />
                 </FormControl>
-                <FormMessage className="text-sm" />
+                <FormMessage className="text-sm text-red-600 dark:text-red-400" />
               </FormItem>
             )}
           />
@@ -200,7 +201,8 @@ export function RegisterForm() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-emerald-800 flex items-center gap-2">
+                <FormLabel className="text-slate-700 dark:text-slate-300 flex items-center gap-2 font-medium">
+                  <Mail className="w-4 h-4" />
                   Email Address
                 </FormLabel>
                 <FormControl>
@@ -208,11 +210,11 @@ export function RegisterForm() {
                     {...field}
                     type="email"
                     placeholder="john@example.com"
-                    className="h-11 text-black border-emerald-200 focus:border-emerald-400 focus:ring-emerald-200"
+                    className="h-12 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:border-emerald-500 focus:ring-emerald-200 dark:focus:border-emerald-400 dark:focus:ring-emerald-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
                     disabled={isLoading}
                   />
                 </FormControl>
-                <FormMessage className="text-sm" />
+                <FormMessage className="text-sm text-red-600 dark:text-red-400" />
               </FormItem>
             )}
           />
@@ -223,7 +225,8 @@ export function RegisterForm() {
             name="phoneNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-emerald-800 flex items-center gap-2">
+                <FormLabel className="text-slate-700 dark:text-slate-300 flex items-center gap-2 font-medium">
+                  <Phone className="w-4 h-4" />
                   Phone Number
                 </FormLabel>
                 <FormControl>
@@ -231,11 +234,11 @@ export function RegisterForm() {
                     {...field}
                     type="tel"
                     placeholder="+1234567890"
-                    className="h-11 text-black border-emerald-200 focus:border-emerald-400 focus:ring-emerald-200"
+                    className="h-12 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:border-emerald-500 focus:ring-emerald-200 dark:focus:border-emerald-400 dark:focus:ring-emerald-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
                     disabled={isLoading}
                   />
                 </FormControl>
-                <FormMessage className="text-sm" />
+                <FormMessage className="text-sm text-red-600 dark:text-red-400" />
               </FormItem>
             )}
           />
@@ -246,7 +249,8 @@ export function RegisterForm() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-emerald-800 flex items-center gap-2">
+                <FormLabel className="text-slate-700 dark:text-slate-300 flex items-center gap-2 font-medium">
+                  <Lock className="w-4 h-4" />
                   Password
                 </FormLabel>
                 <FormControl>
@@ -255,54 +259,57 @@ export function RegisterForm() {
                       {...field}
                       type={showPassword ? "text" : "password"}
                       placeholder="Create a strong password"
-                      className="h-11 border-emerald-200 focus:border-emerald-400 focus:ring-emerald-200 pr-10"
+                      className="h-12 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:border-emerald-500 focus:ring-emerald-200 dark:focus:border-emerald-400 dark:focus:ring-emerald-800 pr-12 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
                       disabled={isLoading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600 hover:text-emerald-800"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
                       disabled={isLoading}
                     >
-                      {showPassword ? "Hide" : "Show"}
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </FormControl>
-                
+
                 {/* Password Strength */}
                 {passwordStrength && (
-                  <div className="mt-2">
-                    <div className="flex gap-1 mb-1">
+                  <div className="mt-3 space-y-2">
+                    <div className="flex gap-1">
                       {[1, 2, 3, 4, 5].map((level) => (
                         <div
                           key={level}
-                          className={`h-1 flex-1 rounded-full transition-colors ${
-                            level <= passwordStrength.score 
-                              ? passwordStrength.strength === 'strong' 
-                                ? 'bg-green-500' 
-                                : passwordStrength.strength === 'medium' 
-                                ? 'bg-yellow-500' 
+                          className={`h-2 flex-1 rounded-full transition-all duration-300 ${level <= passwordStrength.score
+                            ? passwordStrength.strength === 'strong'
+                              ? 'bg-emerald-500'
+                              : passwordStrength.strength === 'medium'
+                                ? 'bg-yellow-500'
                                 : 'bg-red-500'
-                              : 'bg-gray-200'
-                          }`}
+                            : 'bg-slate-200 dark:bg-slate-700'
+                            }`}
                         />
                       ))}
                     </div>
-                    <div className="flex items-center gap-1 text-xs">
-                      <span className={
-                        passwordStrength.strength === 'strong' 
-                          ? 'text-green-600' 
-                          : passwordStrength.strength === 'medium' 
-                          ? 'text-yellow-600' 
-                          : 'text-red-600'
-                      }>
-                        Password strength: {passwordStrength.strength}
+                    <div className="flex items-center justify-between">
+                      <span className={`text-sm font-medium ${passwordStrength.strength === 'strong'
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : passwordStrength.strength === 'medium'
+                          ? 'text-yellow-600 dark:text-yellow-400'
+                          : 'text-red-600 dark:text-red-400'
+                        }`}>
+                        {passwordStrength.strength === 'strong' && '🔒 Strong password'}
+                        {passwordStrength.strength === 'medium' && '⚠️ Medium strength'}
+                        {passwordStrength.strength === 'weak' && '❌ Weak password'}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {passwordStrength.score}/5
                       </span>
                     </div>
                   </div>
                 )}
-                
-                <FormMessage className="text-sm" />
+
+                <FormMessage className="text-sm text-red-600 dark:text-red-400" />
               </FormItem>
             )}
           />
@@ -313,25 +320,30 @@ export function RegisterForm() {
             name="contactMethod"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-emerald-800">
+                <FormLabel className="text-slate-700 dark:text-slate-300 flex items-center gap-2 font-medium">
+                  <MessageSquare className="w-4 h-4" />
                   Verification Method
                 </FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
+                <Select
+                  onValueChange={field.onChange}
                   defaultValue={field.value}
                   disabled={isLoading}
                 >
                   <FormControl>
-                    <SelectTrigger className="h-11 border-emerald-200 focus:border-emerald-400 focus:ring-emerald-200">
+                    <SelectTrigger className="h-12 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:border-emerald-500 focus:ring-emerald-200 dark:focus:border-emerald-400 dark:focus:ring-emerald-800 text-slate-900 dark:text-white">
                       <SelectValue placeholder="Choose verification method" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="email">Email verification</SelectItem>
-                    <SelectItem value="phone">SMS verification</SelectItem>
+                  <SelectContent className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                    <SelectItem value="email" className="text-slate-900 dark:text-white focus:bg-slate-100 dark:focus:bg-slate-700">
+                      📧 Email verification
+                    </SelectItem>
+                    <SelectItem value="phone" className="text-slate-900 dark:text-white focus:bg-slate-100 dark:focus:bg-slate-700">
+                      📱 SMS verification
+                    </SelectItem>
                   </SelectContent>
                 </Select>
-                <FormMessage className="text-sm" />
+                <FormMessage className="text-sm text-red-600 dark:text-red-400" />
               </FormItem>
             )}
           />
@@ -340,14 +352,20 @@ export function RegisterForm() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 font-medium shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
+            className="w-full h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
-              <>
-                <span className="animate-pulse">Creating Account...</span>
-              </>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Creating Account...</span>
+              </div>
             ) : (
-              "Create Account"
+              <div className="flex items-center space-x-2">
+                <span>Create Account</span>
+                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                  →
+                </div>
+              </div>
             )}
           </Button>
         </form>
