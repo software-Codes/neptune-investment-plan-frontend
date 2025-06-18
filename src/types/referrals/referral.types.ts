@@ -1,47 +1,107 @@
-// ****************************************************************************************
-// Referral System – Front‑end Skeleton (TypeScript / React / Next.js)
-// ----------------------------------------------------------------------------------------
-//  ▸ Purpose:  Drop‑in client + hooks that work in **mock** mode today and switch to **REST**
-//               as soon as the backend is ready – with zero changes in components.
-//  ▸ Principles:  SOLID  •  DRY  •  Clean Architecture  •  React‑Query for data‑fetching
-//  ▸ How to use: 1) Copy these files into your project respecting the folder paths below.
-//                 2) Flip `NEXT_PUBLIC_USE_MOCKS` to "false" when backend is live.
-// ****************************************************************************************
+// types/referrals/referral.types.ts
 
-// ┌───────────────────────────────────────────────────────────────────────────────┐
-// │ 1. types/users/referral.types.ts                                            │
-// └───────────────────────────────────────────────────────────────────────────────┘
+/**
+ * Enhanced referral system types with better error handling and validation
+ */
 
-/*
-  Dedicated type definitions (kept tiny & isolated so you never pollute global
-  user types).  Add new fields only here – hooks/components stay closed to mod.
-*/
-
-export interface ReferralCodePayload
-{
-    code: string;
-    created_at: Date;
+export interface ReferralCodePayload {
+  code: string;
+  created_at: Date;
+  is_active: boolean;
+  usage_count: number;
+  max_usage?: number;
 }
 
-export interface ReferralStatPayload
-{
-    totalReferred: number;
-    totalEarned: string; // use string to keep decimals exact
-    activeReferees: number;
-
+export interface ReferralStatPayload {
+  totalReferred: number;
+  totalEarned: string;
+  activeReferees: number;
+  availableBalance: string;
+  totalWithdrawn: string;
+  totalReinvested: string;
+  conversionRate: number; // percentage of referred users who made deposits
 }
 
 export interface ReferralEarningEntry {
-    id: string;
-    referee_id: string;
-    amount: string;
-    date: Date;
-    status: "pending" | "paid";
+  id: string;
+  referee_id: string;
+  referee_name?: string;
+  amount: string;
+  date: Date;
+  status: "pending" | "paid" | "cancelled";
+  deposit_amount?: string;
+  bonus_percentage: number;
 }
 
-// A tiny helper for pagination responses – keeps list + cursor in one place.
-export interface Paginated <T> 
-{
-    items: T[]
-    nextPage?: number
+export interface ReferralWithdrawRequest {
+  amount: string;
+  wallet_address?: string;
+  payment_method?: "binance" | "bank" | "internal_transfer";
+}
+
+export interface ReferralReinvestRequest {
+  amount: string;
+  investment_plan?: string;
+}
+
+export interface ReferralActionResponse {
+  success: boolean;
+  message: string;
+  newBalance: string;
+  transaction_id?: string;
+  estimated_processing_time?: string;
+}
+
+export interface ReferralInviteData {
+  code: string;
+  applied_by?: string;
+  applied_at?: Date;
+}
+
+// Pagination helper with metadata
+export interface Paginated<T> {
+  items: T[];
+  nextPage?: number;
+  totalPages?: number;
+  totalItems?: number;
+  currentPage: number;
+  hasMore: boolean;
+}
+
+// Error types for better error handling
+export interface ReferralError {
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+}
+
+// Activity feed types
+export interface ReferralActivity {
+  id: string;
+  type: "referral_joined" | "bonus_earned" | "withdrawal" | "reinvestment";
+  description: string;
+  amount?: string;
+  date: Date;
+  status: "completed" | "pending" | "failed";
+}
+
+// Analytics types
+export interface ReferralAnalytics {
+  monthly_earnings: Array<{
+    month: string;
+    earnings: string;
+    referrals: number;
+  }>;
+  top_referees: Array<{
+    id: string;
+    name: string;
+    total_deposits: string;
+    bonus_earned: string;
+  }>;
+  performance_metrics: {
+    click_through_rate: number;
+    conversion_rate: number;
+    average_deposit: string;
+    retention_rate: number;
+  };
 }
