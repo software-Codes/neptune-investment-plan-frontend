@@ -49,7 +49,6 @@ export const Header: React.FC = () => {
   const navigation: NavigationItem[] = [
     { name: 'Dashboard', href: `/${userId}/dashboard` },
     { name: 'Invest', href: `/${userId}/investments` },
-    { name: 'Wallets', href: `/${userId}/wallet` },
     { name: 'Deposits', href: `/${userId}/deposits` },
     { name: 'Withdrawals', href: `/${userId}/withdrawals` },
     { name: 'Referrals', href: `/${userId}/referral` },

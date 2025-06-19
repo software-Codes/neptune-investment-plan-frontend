@@ -1,10 +1,10 @@
-import React from 'react'
+"use client"
+import ReferralDashboard from '@/components/users/referrals/ReferralDashboard'
 
 const RefferalPage = () => {
   return (
     <div>
-      <h1>Referral</h1>
-      <p>This is a description of the referral.</p>
+    <ReferralDashboard />
     </div>
   )
 }

@@ -1,25 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="17ed6cb1-e9eb-4907-b30b-759e8a2fac4f" name="Changes" comment="feat(investments): Add investment types and hooks for managing user investments">
-      <change afterPath="$PROJECT_DIR$/src/components/investments/InvestmentCard.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/hooks/investment/investment.hooks.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/lib/api/investments.client.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/lib/api/wallets.client.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/mocks/investments.mock.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/material_theme_project_new.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/material_theme_project_new.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/neptune-investment-plan-frontend.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/(user)/[userId]/deposits/[depositId]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/(user)/[userId]/deposits/[depositId]/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/(user)/[userId]/investments/components/CompoundingOptions.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/(user)/[userId]/investments/components/InvestmentCard.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/(user)/[userId]/investments/components/ROICalculator.tsx" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/app/(user)/[userId]/investments/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/(user)/[userId]/investments/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/mocks/investments.mock.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/mocks/investments.mock.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,22 +17,22 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "cm-collins"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;cm-collins&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/software-Codes/neptune-investment-plan-frontend.git",
-    "accountId": "eb221541-4581-4c5c-9abc-fb2aefd6e7b3"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/software-Codes/neptune-investment-plan-frontend.git&quot;,
+    &quot;accountId&quot;: &quot;eb221541-4581-4c5c-9abc-fb2aefd6e7b3&quot;
   }
-}]]></component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "customColor": "",
-  "associatedIndex": 2
-}]]></component>
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 2
+}</component>
   <component name="ProjectId" id="2yPume3wutxJSrtdziRnbZTjN47" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -55,14 +43,17 @@
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "user-deposit-flow",
+    "git-widget-placeholder": "investment-flow-pages-client",
     "js.debugger.nextJs.config.created.client": "true",
     "js.debugger.nextJs.config.created.server": "true",
     "last_opened_file_path": "/home/collins-king/Development-projects/mozilla-rcc",
+    "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "rearrange.code.on.save": "true",
     "settings.editor.selected.configurable": "preferences.general",
+    "ts.external.directory.path": "/home/collins-king/Development-projects/neptune-investment-plan-frontend/node_modules/typescript/lib",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -96,6 +87,7 @@
       <option name="presentableId" value="Default" />
       <updated>1746904385883</updated>
       <workItem from="1749748693966" duration="77000" />
+      <workItem from="1750226360500" duration="431000" />
     </task>
     <servers />
   </component>
