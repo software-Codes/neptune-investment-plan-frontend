@@ -5,8 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
 import { 
   Copy, 
   Share2, 
@@ -31,6 +29,7 @@ import {
   Eye,
   EyeOff
 } from "lucide-react";
+import { toast } from "sonner";
 
 // Mock hooks (replace with your actual hooks)
 const useReferralCode = () => ({
@@ -142,6 +141,7 @@ const useReferralSharing = () => ({
   },
   copyCode: async () => {
     console.log("Code copied");
+    toast.success("Referral code copied to clipboard!");
   },
   referralCode: "INVEST2025"
 });
