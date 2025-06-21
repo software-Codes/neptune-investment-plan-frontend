@@ -1,5 +1,5 @@
 import { WalletService } from "@/app/(user)/[userId]/wallet/services/wallet.service";
-import { notificationService } from "@/app/(user)/[userId]/withdrawals/services/notifications.service";
+import { NotificationService } from "@/app/(user)/[userId]/withdrawals/services/notifications.service";
 import { WalletSummary } from "@/types/wallet/wallet.types";
 import { Wallet, WalletTransferForm, WalletType } from "@/types/withdrawals/withdrawal.types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -126,12 +126,12 @@ export const useWalletTransfer = () => {
             if (context?.previousBalances) {
                 queryClient.setQueryData(walletKeys.balances(), context.previousBalances);
             }
-            notificationService.getInstance().error(`Transfer failed: ${error.message}`);
+            NotificationService.getInstance().error(`Transfer failed: ${error.message}`);
         },
         onSuccess: (data, variables) => {
             // Invalidate and refetch related queries
             queryClient.invalidateQueries({ queryKey: walletKeys.all });
-            notificationService.getInstance().success(
+            NotificationService.getInstance().success(
                 `Successfully transferred $${variables.amount} from ${variables.from_wallet} to ${variables.to_wallet} wallet`
             );
         },
@@ -144,7 +144,7 @@ export const useTransferValidation = () => {
     mutationFn: (data: WalletTransferForm) => 
       WalletService.getInstance().validateTransfer(data),
     onError: (error) => {
-      notificationService.getInstance().warning(`Validation failed: ${error.message}`);
+      NotificationService.getInstance().warning(`Validation failed: ${error.message}`);
     },
   });
 };

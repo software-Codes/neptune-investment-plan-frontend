@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { notificationService } from "../../services/notifications.service";
+import { NotificationService } from "../../services/notifications.service";
 
 //reusable form state management 
 export const useFormState = <T>(initialState: T, validator?: (data: T) => string[]) => {
@@ -21,7 +21,7 @@ export const useApiError = () => {
     const handleError = (err: any) => {
         const message = err.message || ' An unexpected error ovccurred'
         setError(message);
-        notificationService.getInstance().error(message);
+        NotificationService .getInstance().error(message);
     };
     const clearError = () => setError(null);
     return { error, handleError, clearError }

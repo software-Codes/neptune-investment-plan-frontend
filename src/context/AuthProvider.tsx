@@ -1,7 +1,5 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// src/providers/AuthProvider.tsx
+
+
 "use client"
 
 import React, { createContext, useEffect, useState, useRef } from "react";

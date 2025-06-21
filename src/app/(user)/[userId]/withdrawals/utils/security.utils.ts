@@ -1,4 +1,3 @@
-import { Input } from "@/components/ui/input";
 
 export class SecurityUtils {
     // Sanitize user inputs

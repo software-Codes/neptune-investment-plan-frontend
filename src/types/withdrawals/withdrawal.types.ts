@@ -1,5 +1,5 @@
 //base api response type for withdrawals
-export interface APIResponse<T = any> {
+    export interface APIResponse<T = any> extends Response {
     success: boolean;
     data?: T;
     error?: string;

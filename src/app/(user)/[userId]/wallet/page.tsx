@@ -6,6 +6,7 @@ const UserWalletPage = () => {
     <div>
       <h1>Wallet</h1>
       {/* <WalletBalancesCard wallets={[]} onTransfer={() => {}} /> */}
+      <WalletBalancesCard wallets={[]} onTransfer={() => {}} />
     </div>
   )
 }

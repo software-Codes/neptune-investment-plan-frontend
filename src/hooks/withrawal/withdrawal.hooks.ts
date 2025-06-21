@@ -1,5 +1,5 @@
 import { WalletService } from "@/app/(user)/[userId]/wallet/services/wallet.service";
-import { notificationService } from "@/app/(user)/[userId]/withdrawals/services/notifications.service";
+import { NotificationService } from "@/app/(user)/[userId]/withdrawals/services/notifications.service";
 import {
   walletKeys,
   withdrawalKeys,
@@ -12,7 +12,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
-const useCreateWithdrawal = () => {
+export const useCreateWithdrawal = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -25,13 +25,13 @@ const useCreateWithdrawal = () => {
     },
     onError: (error) => {
       // Centralized error handling
-      notificationService.getInstance().error(error.message);
+      NotificationService.getInstance().error(error.message);
     },
   });
 };
 
 // Wallet Hooks
-const useWalletBalances = () => {
+export const useWalletBalances = () => {
   return useQuery({
     queryKey: walletKeys.balances(),
     queryFn: () => WalletService.getInstance().getWalletBalances(),
@@ -41,7 +41,7 @@ const useWalletBalances = () => {
 };
 
 // Expensive calculations memoization
-const useWithdrawalSummary = (withdrawals: WithdrawalRequest[]) => {
+export const useWithdrawalSummary = (withdrawals: WithdrawalRequest[]) => {
   return useMemo(() => {
     return withdrawals.reduce(
       (acc, withdrawal) => {
@@ -56,7 +56,7 @@ const useWithdrawalSummary = (withdrawals: WithdrawalRequest[]) => {
   }, [withdrawals]);
 };
 // Selective query invalidation
-const useOptimizedQueries = () => {
+export const useOptimizedQueries = () => {
   const queryClient = useQueryClient();
 
   const invalidateWithdrawals = useCallback(() => {
