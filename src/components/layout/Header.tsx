@@ -52,7 +52,6 @@ export const Header: React.FC = () => {
     { name: 'Deposits', href: `/${userId}/deposits` },
     { name: 'Withdrawals', href: `/${userId}/withdrawals` },
     { name: 'Referrals', href: `/${userId}/referral` },
-    { name: 'Transactions', href: `/${userId}/transactions` },
   ]
 
   const isDark = theme === 'dark'
