@@ -1,5 +1,5 @@
 //base api response type for withdrawals
-    export interface APIResponse<T = any> extends Response {
+    export interface APIResponse<T = any>  {
     success: boolean;
     data?: T;
     error?: string;
@@ -17,7 +17,8 @@ export interface Wallet {
     balance: number;
     locked_balance: number;
     updated_at: string;
-    created_at: string
+    created_at: string;
+
 }
 export interface WithdrawalRequest {
     withdrawal_id: string;

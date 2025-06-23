@@ -1,4 +1,4 @@
-import { notificationService } from "@/app/(user)/[userId]/withdrawals/services/notifications.service";
+import { NotificationService } from "@/app/(user)/[userId]/withdrawals/services/notifications.service";
 import { WalletType } from "@/types/withdrawals/withdrawal.types";
 import { useEffect, useState } from "react";
 
@@ -47,7 +47,7 @@ class WalletBalanceMonitor {
   private checkThresholdAlert(walletType: WalletType, balance: number): void {
     const threshold = this.thresholds.get(walletType);
     if (threshold && balance < threshold) {
-      notificationService.getInstance().warning(
+      NotificationService.getInstance().warning(
         `Low balance alert: ${walletType} wallet balance ($${balance}) is below threshold ($${threshold})`
       );
     }

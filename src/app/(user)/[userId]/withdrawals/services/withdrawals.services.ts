@@ -19,7 +19,7 @@ export class WithdrawalService {
         return this.apiClient.post("/withdrawals", data);
     }
 
-    async getWithdrawalHistory(): Promise<APIResponse<WithdrawalRequest[]>> {
+    async getWithdrawalHistory(pageParam: number): Promise<APIResponse<WithdrawalRequest[]>> {
         return this.apiClient.get("/withdrawals/history");
     }
 
