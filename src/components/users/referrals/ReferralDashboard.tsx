@@ -5,13 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Copy, 
-  Share2, 
-  Send, 
-  DollarSign, 
-  Users, 
-  TrendingUp, 
+import {
+  Copy,
+  Share2,
+  Send,
+  DollarSign,
+  Users,
+  TrendingUp,
   Wallet,
   ExternalLink,
   MessageCircle,
@@ -33,8 +33,8 @@ import { toast } from "sonner";
 
 // Mock hooks (replace with your actual hooks)
 const useReferralCode = () => ({
-  data: { 
-    code: "INVEST2025", 
+  data: {
+    code: "INVEST2025",
     created_at: new Date("2025-01-01"),
     is_active: true,
     usage_count: 12,
@@ -45,7 +45,7 @@ const useReferralCode = () => ({
 });
 
 const useReferralStats = () => ({
-  data: { 
+  data: {
     totalReferred: 12,
     totalEarned: "485.50",
     activeReferees: 8,
@@ -75,7 +75,7 @@ const useReferralEarnings = () => ({
   },
   isLoading: false,
   error: null,
-  fetchNextPage: () => {},
+  fetchNextPage: () => { },
   hasNextPage: false,
   isFetchingNextPage: false
 });
@@ -100,7 +100,7 @@ const useReferralActivities = () => ({
   },
   isLoading: false,
   error: null,
-  fetchNextPage: () => {},
+  fetchNextPage: () => { },
   hasNextPage: false,
   isFetchingNextPage: false
 });
@@ -153,7 +153,7 @@ const ReferralDashboard = () => {
   const activitiesQuery = useReferralActivities();
   const { withdraw, reinvest, applyInviteCode, validateCode } = useReferralActions();
   const { shareCode, copyCode } = useReferralSharing();
-  
+
   const [inviteInput, setInviteInput] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [reinvestAmount, setReinvestAmount] = useState("");
@@ -177,7 +177,7 @@ const ReferralDashboard = () => {
 
   const handleApplyCode = async () => {
     if (!inviteInput.trim()) return;
-    
+
     try {
       await applyInviteCode.mutateAsync(inviteInput.trim());
       setInviteInput("");
@@ -192,7 +192,7 @@ const ReferralDashboard = () => {
       alert("Please enter a valid amount");
       return;
     }
-    
+
     if (amount > parseFloat(statsData?.availableBalance || "0")) {
       alert("Insufficient balance");
       return;
@@ -215,7 +215,7 @@ const ReferralDashboard = () => {
       alert("Please enter a valid amount");
       return;
     }
-    
+
     if (amount > parseFloat(statsData?.availableBalance || "0")) {
       alert("Insufficient balance");
       return;
@@ -249,7 +249,7 @@ const ReferralDashboard = () => {
       cancelled: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400",
       failed: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
     };
-    
+
     return (
       <Badge className={`${variants[status] || variants.pending} border-0`}>
         {status}
@@ -594,55 +594,8 @@ const ReferralDashboard = () => {
       </Card>
 
       {/* Tabs Section */}
-      <Tabs defaultValue="earnings" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="earnings">Earnings History</TabsTrigger>
-          <TabsTrigger value="activities">Recent Activities</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="activities" className="space-y-4">
 
-        <TabsContent value="earnings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Earnings History
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {earningsQuery.data?.pages[0]?.items?.map((earning) => (
-                  <div
-                    key={earning.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Award className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{earning.referee_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {earning.date.toLocaleDateString()} • {earning.bonus_percentage}% bonus
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-green-600">+${earning.amount}</p>
-                      {getStatusBadge(earning.status)}
-                    </div>
-                  </div>
-                ))}
-                {earningsQuery.data?.pages[0]?.items?.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Award className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>No earnings yet</p>
-                    <p className="text-sm">Start referring users to see your earnings here</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="activities" className="space-y-4">
           <Card>
