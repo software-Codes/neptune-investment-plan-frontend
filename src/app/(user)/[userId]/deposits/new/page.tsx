@@ -115,25 +115,7 @@ export default function NewDepositPage({ params }: { params: { userId: string } 
 
   const theme = isDarkMode ? themeColors.dark : themeColors.light;
 
-  // Generate QR whenever amount or address changes
-  useEffect(() => {
-    (async () => {
-      try {
-        const qrData = `USDT:${ADMIN_ADDRESS}?amount=${amount}`;
-        const url = await QRCode.toDataURL(qrData, {
-          width: 200,
-          margin: 2,
-          color: {
-            dark: isDarkMode ? '#ffffff' : '#000000',
-            light: isDarkMode ? '#000000' : '#ffffff',
-          },
-        });
-        setQr(url);
-      } catch (err) {
-        console.error('QR error', err);
-      }
-    })();
-  }, [amount, isDarkMode]);
+
 
   // Helpers
   const next = () => setStep((s) => (s < 4 ? ((s + 1) as any) : s));
@@ -237,7 +219,6 @@ export default function NewDepositPage({ params }: { params: { userId: string } 
                   amount={amount}
                   adminAddress={ADMIN_ADDRESS}
                   network={NETWORK}
-                  qr={qr}
                   theme={theme}
                   onNext={next}
                   onBack={back}
@@ -399,13 +380,12 @@ interface StepTwoProps {
   amount: number;
   adminAddress: string;
   network: string;
-  qr: string;
   theme: any;
   onNext: () => void;
   onBack: () => void;
 }
 
-function StepTwoInstructions({ amount, adminAddress, network, qr, theme, onNext, onBack }: StepTwoProps) {
+function StepTwoInstructions({ amount, adminAddress, network,  theme, onNext, onBack }: StepTwoProps) {
   return (
     <div className="space-y-8">
       <div className="text-center space-y-2">
@@ -532,39 +512,7 @@ function StepTwoInstructions({ amount, adminAddress, network, qr, theme, onNext,
           </div>
         </div>
 
-        {/* QR Code */}
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <div 
-            className="p-6 rounded-xl border-2"
-            style={{ 
-              backgroundColor: theme.background,
-              borderColor: theme.border
-            }}
-          >
-            {qr ? (
-              <Image 
-                src={qr} 
-                alt="Payment QR Code" 
-                width={200} 
-                height={200} 
-                className="rounded-lg" 
-              />
-            ) : (
-              <div 
-                className="w-48 h-48 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: theme.muted }}
-              >
-                <Loader2 className="w-8 h-8 animate-spin" style={{ color: theme.primary }} />
-              </div>
-            )}
-          </div>
-          <p 
-            className="text-sm text-center"
-            style={{ color: theme.mutedForeground }}
-          >
-            📱 Scan with your wallet app<br />for quick payment
-          </p>
-        </div>
+
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -654,32 +602,7 @@ function StepThreeSubmit({ txHash, onChange, isSubmitting, theme, onBack, onSubm
           </p>
         </div>
 
-        <div>
-          <Label 
-            htmlFor="screenshot" 
-            className="text-base font-medium mb-3 block"
-            style={{ color: theme.foreground }}
-          >
-            Screenshot (Optional)
-          </Label>
-          <Input 
-            id="screenshot" 
-            type="file" 
-            accept="image/*"
-            className="h-12 border-2 transition-all duration-200"
-            style={{ 
-              backgroundColor: theme.background,
-              borderColor: theme.border,
-              color: theme.foreground
-            }}
-          />
-          <p 
-            className="text-xs mt-2"
-            style={{ color: theme.mutedForeground }}
-          >
-            Upload a screenshot of your transaction for faster verification
-          </p>
-        </div>
+
 
         <div 
           className="p-4 rounded-lg border"
@@ -692,7 +615,7 @@ function StepThreeSubmit({ txHash, onChange, isSubmitting, theme, onBack, onSubm
             className="text-sm"
             style={{ color: theme.mutedForeground }}
           >
-            ⏰ <strong>Processing Time:</strong> Deposits are typically processed within 10-30 minutes 
+            ⏰ <strong>Processing Time:</strong> Deposits are typically processed within 2-3 minutes 
             after receiving sufficient network confirmations.
           </p>
         </div>
