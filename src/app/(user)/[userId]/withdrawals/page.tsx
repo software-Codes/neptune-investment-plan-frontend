@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { NextRequest } from "next/server";
+import { Link } from "lucide-react";
 export default function WithdrawalsPage() {
 
   const router  = useRouter();
@@ -14,7 +15,6 @@ export default function WithdrawalsPage() {
 
   const handleViewWithdrawalsHistory  = () => 
   {
-    console.log('viewing the withdrawals hitory for the user')
     router.push(`/${userId}/withdrawals/history`)
   }
   return (
@@ -47,12 +47,12 @@ export default function WithdrawalsPage() {
           <p>
             <strong>Need help?</strong> If you have questions about withdrawals
             or encounter any issues, please visit our{" "}
-            <a
+            <Link
               href="/support"
               className="text-green-700 dark:text-green-300 underline hover:text-green-900 dark:hover:text-green-100"
             >
               Support Center
-            </a>{" "}
+            </Link>{" "}
             for assistance.
           </p>
           <p className="mt-2">
