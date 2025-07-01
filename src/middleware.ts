@@ -15,6 +15,7 @@ const publicRoutes = [
   //admin routes
   "/admin/auth/login",
   "/admin/auth/register",
+  "/admin/dashboard"
 ];
 
 
