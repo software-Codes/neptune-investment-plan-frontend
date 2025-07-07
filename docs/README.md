@@ -946,7 +946,11 @@ This structure provides excellent separation of concerns, maintainability, and s
 
 ```
 src/
-├── app/
+├── app/(Admin)/
+          |
+          |__[userId]
+
+
 │   └── (users)/
 │       └── [userId]/                 # Dynamic user routes
 │           ├── layout.tsx            # User dashboard layout
@@ -974,133 +978,56 @@ src/
 │           │   └── new/
 │           │       └── page.tsx      # Start new investment
 │           │
-│           ├── transfers/            # Internal wallet transfers
-│           │   ├── page.tsx          # Transfers list
-│           │   ├── [transferId]/
-│           │   │   └── page.tsx      # Single transfer view
-│           │   └── new/
-│           │       └── page.tsx      # Create new transfer
 │           │
-│           ├── transactions/         # All transactions view
-│           │   ├── page.tsx          # All transactions list
-│           │   └── [transactionId]/
-│           │       └── page.tsx      # Transaction details
+│           │  
 │           │
 │           └── referrals/            # Referral management
-│               ├── page.tsx          # Referral dashboard
-│               └── earnings/
-│                   └── page.tsx      # Referral earnings
-
+│              
 ├── components/
 │   └── users/                        # User-specific components
 │       ├── layout/
-│       │   ├── UserLayout.tsx
-│       │   ├── UserHeader.tsx
-│       │   ├── UserSidebar.tsx
-│       │   └── UserNavigation.tsx
+│       │  
 │       │
 │       ├── dashboard/
-│       │   ├── DashboardStats.tsx
-│       │   ├── WalletOverview.tsx
-│       │   ├── InvestmentSummary.tsx
-│       │   └── RecentActivity.tsx
 │       │
 │       ├── deposits/
-│       │   ├── DepositForm.tsx
-│       │   ├── DepositHistory.tsx
-│       │   ├── DepositAddress.tsx
-│       │   ├── TransactionHashInput.tsx
-│       │   └── DepositStatus.tsx
+│       │   
 │       │
 │       ├── withdrawals/
-│       │   ├── WithdrawalForm.tsx
-│       │   ├── WithdrawalHistory.tsx
-│       │   ├── WithdrawalStatus.tsx
-│       │   ├── AdminApprovalTimer.tsx
-│       │   └── WithdrawalLimits.tsx
+│       │  
 │       │
 │       ├── investments/
-│       │   ├── InvestmentForm.tsx
-│       │   ├── InvestmentCard.tsx
-│       │   ├── InvestmentHistory.tsx
-│       │   ├── ProfitCalculator.tsx
-│       │   ├── CompoundInterest.tsx
-│       │   └── InvestmentStatus.tsx
+│       │   
 │       │
 │       ├── transfers/
-│       │   ├── TransferForm.tsx
-│       │   ├── TransferHistory.tsx
-│       │   ├── WalletBalances.tsx
-│       │   └── TransferConfirmation.tsx
-│       │
+│       │  
 │       ├── transactions/
-│       │   ├── TransactionList.tsx
-│       │   ├── TransactionCard.tsx
-│       │   ├── TransactionFilters.tsx
-│       │   ├── TransactionSearch.tsx
-│       │   └── TransactionDetails.tsx
-│       │
+│       │   
 │       ├── referrals/
-│       │   ├── ReferralCode.tsx
-│       │   ├── ReferralStats.tsx
-│       │   ├── ReferralHistory.tsx
-│       │   └── ReferralEarnings.tsx
+│       │  
 │       │
 │       └── shared/
-│           ├── StatusBadge.tsx
-│           ├── AmountDisplay.tsx
-│           ├── CryptoAddress.tsx
-│           ├── DateTimeDisplay.tsx
-│           ├── LoadingSpinner.tsx
-│           └── ErrorMessage.tsx
+│           
 
 ├── hooks/
 │   └── users/
-│       ├── useUserData.ts            # Get user profile and stats
-│       ├── useUserDeposits.ts        # Manage user deposits
-│       ├── useUserWithdrawals.ts     # Manage user withdrawals
-│       ├── useUserInvestments.ts     # Manage user investments
-│       ├── useUserTransfers.ts       # Manage internal transfers
-│       ├── useUserTransactions.ts    # Get all user transactions
-│       ├── useUserReferrals.ts       # Manage referral system
-│       ├── useWalletBalances.ts      # Get wallet balances
-│       └── useTransactionById.ts     # Get specific transaction
+│  
 
 ├── services/
 │   └── users/
-│       ├── userApi.ts                # User profile API calls
-│       ├── depositApi.ts             # Deposit-related API calls
-│       ├── withdrawalApi.ts          # Withdrawal-related API calls
-│       ├── investmentApi.ts          # Investment-related API calls
-│       ├── transferApi.ts            # Transfer-related API calls
-│       ├── transactionApi.ts         # Transaction-related API calls
-│       ├── referralApi.ts            # Referral-related API calls
-│       └── walletApi.ts              # Wallet-related API calls
+│     
 
 ├── types/
 │   └── users/
-│       ├── user.types.ts             # User profile types
-│       ├── deposit.types.ts          # Deposit-related types
-│       ├── withdrawal.types.ts       # Withdrawal-related types
-│       ├── investment.types.ts       # Investment-related types
-│       ├── transfer.types.ts         # Transfer-related types
-│       ├── transaction.types.ts      # Transaction-related types
-│       ├── referral.types.ts         # Referral-related types
-│       └── wallet.types.ts           # Wallet-related types
+│      
 
 ├── utils/
 │   └── users/
-│       ├── formatters.ts             # Format amounts, dates, etc.
-│       ├── validators.ts             # Validation functions
-│       ├── calculations.ts           # Investment calculations
-│       ├── transactionHelpers.ts     # Transaction utility functions
-│       └── constants.ts              # User-related constants
+│    
 
 └── lib/
     └── users/
-        ├── api-client.ts             # API client configuration
-        ├── auth-context.ts           # User authentication context
-        └── user-context.ts           # User data context
+      
 ```
 
 ## Key Features of This Structure

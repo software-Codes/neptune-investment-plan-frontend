@@ -1,4 +1,5 @@
 // src/middleware.ts
+import { request } from "http";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -9,7 +10,17 @@ const publicRoutes = [
   "/auth/auth-code/reset-password",
   "/auth/auth-code/complete-recovery",
   "/auth/auth-code/verify-kyc",
+  
+
+  //admin routes
+  "/admin/auth/login",
+  "/admin/auth/register",
+  "/admin/dashboard",
+    "/admin/dashboard/users",
+  "/sentry-example-page"
 ];
+
+
 
 const protectedRoutePatterns = [
   // /<userId>/(dashboard|wallet|…)
@@ -25,6 +36,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authToken = request.cookies.get("auth-token")?.value;
   const userId = request.cookies.get("user-id")?.value;
+  const adminId = request.cookies.get("admin-id")?.value;
 
   // 1. Allow Next internals, assets, API
   if (
