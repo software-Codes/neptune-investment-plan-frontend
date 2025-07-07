@@ -16,6 +16,7 @@ const publicRoutes = [
   "/admin/auth/login",
   "/admin/auth/register",
   "/admin/dashboard",
+    "/admin/dashboard/users",
   "/sentry-example-page"
 ];
 

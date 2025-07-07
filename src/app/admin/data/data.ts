@@ -1,12 +1,8 @@
  export const data = [
   {
-    "id": 1,
-    "header": "Cover page",
+    "userId": 1,
+    "full Name": "Cover page",
     "type": "Cover page",
-    "status": "In Process",
-    "target": "18",
-    "limit": "5",
-    "reviewer": "Eddie Lake"
   },
   {
     "id": 2,
@@ -73,12 +69,9 @@
   },
   {
     "id": 9,
-    "header": "Overview of EMR's Innovative Solutions",
-    "type": "Technical content",
-    "status": "Done",
-    "target": "7",
-    "limit": "23",
-    "reviewer": "Assign reviewer"
+    "full Name": "Overview of EMR's Innovative Solutions",
+    "status": "Collins Munene",
+    
   },
   {
     "id": 10,
