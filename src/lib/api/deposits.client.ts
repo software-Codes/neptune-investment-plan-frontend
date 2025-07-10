@@ -1,7 +1,6 @@
 import { Deposit } from '@/types/deposits.types';
 import { apiClient } from './api-client';
 
-// keeps SRP – deposits only
 export const depositsClient = {
   async list(userId: string) {
     const { data } = await apiClient.get<Deposit[]>(
