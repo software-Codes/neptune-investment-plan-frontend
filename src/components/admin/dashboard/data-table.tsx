@@ -229,7 +229,7 @@ export function DataTable({
   });
   const sortableId = React.useId();
   const sensors = useSensors(
-    useSensor(MouseSensor, {}),
+    useSensor(MouseSensor, {}), 
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
   );

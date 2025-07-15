@@ -196,7 +196,7 @@ class AdminApiClient {
       const apiError = this.handleApiError(error);
       throw new Error(apiError.message);
     }
-  }
+  } 
 
   async getProfile(): Promise<AdminProfile> {
     try {

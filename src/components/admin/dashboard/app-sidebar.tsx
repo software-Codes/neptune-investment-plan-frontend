@@ -28,9 +28,11 @@ import Image from "next/image"
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   adminId?: string
 }
+ 
 
 export function AppSidebar({ adminId = "default", ...props }: AppSidebarProps) {
   const pathname = usePathname()
+
 
   const data = {
     user: {
@@ -109,7 +111,7 @@ export function AppSidebar({ adminId = "default", ...props }: AppSidebarProps) {
         <NavMain items={data.navMain} currentPath={pathname} isActiveRoute={isActiveRoute} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser  />
       </SidebarFooter>
     </Sidebar>
   )
