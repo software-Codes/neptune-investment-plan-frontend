@@ -1,69 +1,154 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+// src/middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Define public routes that don't require authentication
+// Public routes that don't require authentication
 const publicRoutes = [
-  "/pages/auth/login",
-  "/pages/auth/register",
-  "/pages/auth/forgot-password",
+  "/auth/login",
+  "/auth/register",
+  "/auth/auth-code/otp-verify",
+  "/auth/auth-code/reset-password",
+  "/auth/auth-code/complete-recovery",
+  "/auth/auth-code/verify-kyc",
+  "/sentry-example-page",
 ];
 
-export async function middleware(request: NextRequest) {
-  const token = request.cookies.get("token")?.value;
+// Admin public routes (no auth required)
+const adminPublicRoutes = [
+  "/admin/auth/login",
+  "/admin/auth/register",
+  "/admin/auth/forgot-password",
+  "/admin/auth/reset-password",
+];
+
+// Protected route patterns
+const protectedRoutePatterns = [
+  // User routes: /<userId>/(dashboard|wallet|investments|...)
+  /^\/[^/]+\/(dashboard|wallet|investments|transactions|referral|deposits)/,
+];
+
+// Admin protected route patterns
+const adminProtectedRoutePatterns = [
+  // Admin routes: /admin/(dashboard|users|settings|...)
+  /^\/admin\/(dashboard|users|settings|analytics|reports)/,
+];
+
+const LOGIN_ROUTE = "/auth/login";
+const ADMIN_LOGIN_ROUTE = "/admin/auth/login";
+const HOME_ROUTE = "/";
+
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow access to public routes without authentication
-  if (publicRoutes.includes(pathname)) {
-    // If user is already authenticated, redirect to dashboard
-    if (token) {
-      return NextResponse.redirect(new URL("/pages/user/dashboard", request.url));
+  // Get tokens from cookies
+  const authToken = request.cookies.get("auth-token")?.value;
+  const userId = request.cookies.get("user-id")?.value;
+  const adminAuthToken = request.cookies.get("admin-auth-token")?.value;
+  const adminId = request.cookies.get("admin-id")?.value;
+
+  // 1. Allow Next.js internals, assets, and API routes
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/static") ||
+    pathname.includes(".") ||
+    pathname.startsWith("/favicon")
+  ) {
+    return NextResponse.next();
+  }
+
+  // 2. Handle root path "/"
+  if (pathname === HOME_ROUTE) {
+    if (!authToken) {
+      return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
+    }
+
+    // If coming from dashboard, allow access to home
+    if (request.nextUrl.searchParams.get("from") === "dashboard") {
+      return NextResponse.next();
+    }
+
+    // If user has ID but not coming from dashboard, redirect to dashboard
+    if (userId) {
+      const dashboardUrl = new URL(`/${userId}/dashboard`, request.url);
+      return NextResponse.redirect(dashboardUrl);
+    }
+
+    // Fallback to login if something is wrong
+    return NextResponse.redirect(new URL(LOGIN_ROUTE, request.url));
+  }
+
+  // 3. Handle admin public routes
+  if (adminPublicRoutes.some((route) => pathname.startsWith(route))) {
+    // If admin is already logged in, redirect to admin dashboard
+    if (adminAuthToken && pathname.startsWith("/admin/auth")) {
+      return NextResponse.redirect(new URL("/admin/dashboard", request.url));
     }
     return NextResponse.next();
   }
-  // Check if user is authenticated for protected routes
-  if (!token) {
-    // Redirect to login page and store the original url as a query parameter
-    const loginUrl = new URL("/pages/auth/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-  try {
-    // Verify token on protected routes
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
 
-    if (!response.ok) {
-      throw new Error("Token verification failed");
+  // 4. Handle user public routes
+  if (publicRoutes.some((route) => pathname.startsWith(route))) {
+    // If user is already logged in, redirect to their dashboard
+    if (authToken && userId && pathname.startsWith("/auth")) {
+      return NextResponse.redirect(
+        new URL(`/${userId}/dashboard`, request.url)
+      );
     }
-
     return NextResponse.next();
-  } catch (error) {
-    // If token verification fails, clear the token and redirect to login
-    const response = NextResponse.redirect(new URL("/login", request.url));
-    response.cookies.delete("token");
-    return response;
   }
 
+  // 5. Handle admin protected routes
+  if (adminProtectedRoutePatterns.some((pattern) => pattern.test(pathname))) {
+    if (!adminAuthToken) {
+      const loginUrl = new URL(ADMIN_LOGIN_ROUTE, request.url);
+      loginUrl.searchParams.set("redirectTo", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    return NextResponse.next();
+  }
+
+  // 6. Handle user protected routes
+  if (protectedRoutePatterns.some((pattern) => pattern.test(pathname))) {
+    if (!authToken) {
+      const loginUrl = new URL(LOGIN_ROUTE, request.url);
+      loginUrl.searchParams.set("redirectTo", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    return NextResponse.next();
+  }
+
+  // 7. Handle specific admin routes that don't match patterns
+  if (pathname.startsWith("/admin/")) {
+    if (!adminAuthToken) {
+      const loginUrl = new URL(ADMIN_LOGIN_ROUTE, request.url);
+      loginUrl.searchParams.set("redirectTo", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    return NextResponse.next();
+  }
+
+  // 8. Handle dynamic user routes (e.g., /userId/...)
+  if (pathname.match(/^\/[^/]+\//) && !pathname.startsWith("/admin/")) {
+    if (!authToken) {
+      const loginUrl = new URL(LOGIN_ROUTE, request.url);
+      loginUrl.searchParams.set("redirectTo", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    return NextResponse.next();
+  }
+
+  // 9. Fallback - redirect to appropriate home
+  if (pathname.startsWith("/admin")) {
+    return NextResponse.redirect(new URL(ADMIN_LOGIN_ROUTE, request.url));
+  }
+
+  return NextResponse.redirect(new URL(HOME_ROUTE, request.url));
 }
 
-// Configure which routes should be handled by the middleware
 export const config = {
   matcher: [
-    /*
-     * Match all routes except:
-     * 1. /api routes
-     * 2. /_next (Next.js internals)
-     * 3. /static (static files)
-     * 4. /_vercel (Vercel internals)
-     * 5. All files in the public folder
-     */
-    '/((?!api|_next|_vercel|static|.*\\..*).*)',
+    // Match all paths except Next.js internals and static files
+    "/((?!api|_next/static|_next/image|_next/data|favicon.ico|sitemap.xml|robots.txt).*)",
   ],
 };

@@ -1,14 +1,39 @@
-import React from 'react'
+// src/app/page.tsx
+"use client"
 
-const Page = () => {
+import React from 'react'
+import { Header } from '@/components/layout/Header'
+import { ChartAreaInteractive } from '@/components/charts'
+import HeroSection from '@/components/ui/hero-section'
+import DashboardSectionHomePage from '@/components/ui/Dashboard-cards-home'
+
+/**
+ * Home page layout: includes Header and responsive main content area.
+ */
+export default function Page() {
   return (
-    <div className='flex flex-col items-center min-h-screen justify-center' >
-      <h1 className='text-green-500 text-4xl'>Home page</h1>
-      
-      <p className='text-gray-700'>Welcome to the home page!</p>
-      <button className='mt-4 bg-blue-500 text-white py-2 px-4 rounded'>Get Started</button>
+    <div className="min-h-screen flex flex-col">
+      {/* Site header */}
+      <Header />
+
+      {/* Main content area grows to fill available space */}
+      <main className="flex-grow w-full container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <HeroSection />
+         <DashboardSectionHomePage />
+
+        <ChartAreaInteractive />
+        {/* <DashboardSectionHomePage /> */}
+
+        
+       
+      </main>
+
+      {/* Optional footer */}
+      <footer className="w-full bg-gray-100 dark:bg-slate-800 py-4">
+        <div className="container mx-auto text-center text-sm text-gray-500 dark:text-gray-400">
+          © {new Date().getFullYear()} Neptune. All rights reserved.
+        </div>
+      </footer>
     </div>
   )
 }
-
-export default Page
