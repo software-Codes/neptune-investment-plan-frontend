@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import * as React from "react";
@@ -21,18 +23,10 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
-  IconCircleCheckFilled,
-  IconDotsVertical,
-  IconGripVertical,
-  IconLayoutColumns,
-  IconLoader,
-  IconPlus,
-  IconTrendingUp,
 } from "@tabler/icons-react";
 import {
   ColumnDef,
@@ -49,26 +43,14 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
-import { toast } from "sonner";
-import { z } from "zod";
 
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -77,11 +59,8 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -90,7 +69,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -99,107 +77,66 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 
-export const schema = z.object({
-  id: z.number(),
-  FullName: z.string(),
-  type: z.string(),
-  status: z.string(),
-  target: z.string(),
-  limit: z.string(),
-  reviewer: z.string(),
-});
+import { useIsMobile } from "@/hooks/use-mobile";
+import { AdminUser } from "@/app/admin/api/users-admin-api-client";
 
-// Create a separate component for the drag handle
-function DragHandle({ id }: { id: number }) {
-  const { attributes, listeners } = useSortable({
-    id,
-  });
+/* ----------------------------------------------------------------------------
+   Column definitions
+   ---------------------------------------------------------------------------- */
 
-}
-
-const columns: ColumnDef<z.infer<typeof schema>>[] = [
-
+const columns: ColumnDef<any>[] = [
   {
-    id: "select",
-    header: ({ table }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      </div>
-    ),
+    accessorKey: "user_id",
+    header: "User ID",
     cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      </div>
+      <span className="font-mono">{String(row.original.user_id).slice(0, 8)}…</span>
     ),
-    enableSorting: false,
-    enableHiding: false,
   },
   {
-    accessorKey: "header",
-    header: "UserId",
+    accessorKey: "created_at",
+    header: "Created At",
     cell: ({ row }) => {
-      return <TableCellViewer item={row.original} />;
+      const createdAt = row.original.created_at;
+      const formatted = createdAt ? new Date(createdAt).toLocaleDateString() : "N/A";
+      return <span>{formatted}</span>;
     },
-    enableHiding: false,
   },
   {
-    accessorKey: "type",
+    accessorKey: "full_name",
     header: "Full Name",
-    cell: ({ row }) => (
-      <div className="w-32">
-        <Badge variant="outline" className="text-muted-foreground px-1.5">
-          {row.original.type}
-        </Badge>
-      </div>
-    ),
+    cell: ({ row }) => <span>{row.original.full_name}</span>,
   },
   {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => (
-      <Badge variant="outline" className="text-muted-foreground px-1.5">
-        {row.original.status === "Done" ? (
-          <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />
-        ) : (
-          <IconLoader />
-        )}
-        {row.original.status}
-      </Badge>
-    ),
+    accessorKey: "email",
+    header: "Email",
+    cell: ({ row }) => <span>{row.original.email}</span>,
   },
-
-
-
+  {
+    accessorKey: "account_status",
+    header: "Status",
+    cell: ({ row }) => <span>{row.original.account_status}</span>,
+  },
 ];
 
-function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
+
+/* ----------------------------------------------------------------------------
+   Draggable row wrapper
+   ---------------------------------------------------------------------------- */
+
+function DraggableRow({ row }: { row: Row<AdminUser> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
-    id: row.original.id,
+    id: row.original.userId,
   });
 
   return (
     <TableRow
-      data-state={row.getIsSelected() && "selected"}
-      data-dragging={isDragging}
       ref={setNodeRef}
+      data-dragging={isDragging}
+      data-state={row.getIsSelected() && "selected"}
       className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition: transition,
-      }}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       {row.getVisibleCells().map((cell) => (
         <TableCell key={cell.id}>
@@ -210,12 +147,33 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   );
 }
 
+/* ----------------------------------------------------------------------------
+   Props
+   ---------------------------------------------------------------------------- */
+
+interface DataTableProps {
+  data: AdminUser[];
+  page: number;
+  total: number;
+  onPageChange: (p: number) => void;
+  isFetching?: boolean;
+  pageSize?: number;
+}
+
+/* ----------------------------------------------------------------------------
+   Component
+   ---------------------------------------------------------------------------- */
+
 export function DataTable({
   data: initialData,
-}: {
-  data: z.infer<typeof schema>[];
-}) {
-  const [data, setData] = React.useState(() => initialData);
+  page,
+  total,
+  onPageChange,
+  isFetching = false,
+  pageSize = 25,
+}: DataTableProps) {
+  /* ------------------- local state (sorting / filters / column hide) ------ */
+  const [data, setData] = React.useState<AdminUser[]>(initialData);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -223,22 +181,26 @@ export function DataTable({
     []
   );
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [pagination, setPagination] = React.useState({
-    pageIndex: 0,
-    pageSize: 10,
-  });
-  const sortableId = React.useId();
+
+  /* ------------------- DnD sensors --------------------------------------- */
   const sensors = useSensors(
-    useSensor(MouseSensor, {}), 
-    useSensor(TouchSensor, {}),
-    useSensor(KeyboardSensor, {})
+    useSensor(MouseSensor),
+    useSensor(TouchSensor),
+    useSensor(KeyboardSensor)
   );
 
+  // row-id helper ---------------------------------------------------------
+  function makeRowId(row: AdminUser, index: number): string {
+    const base = row.userId ?? `row-${index}`;
+    return `${base}`; // ensure string
+  }
+
   const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ id }) => id) || [],
+    () => data.map((row, i) => makeRowId(row, i)),
     [data]
   );
 
+  /* ------------------- TanStack table ------------------------------------ */
   const table = useReactTable({
     data,
     columns,
@@ -247,15 +209,15 @@ export function DataTable({
       columnVisibility,
       rowSelection,
       columnFilters,
-      pagination,
+      pagination: { pageIndex: page - 1, pageSize },
     },
-    getRowId: (row) => row.id,
+    manualPagination: true,
+    pageCount: Math.ceil(total / pageSize),
+    getRowId: (row, i) => makeRowId(row, i),
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
-    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -264,92 +226,78 @@ export function DataTable({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
 
+  /* ------------------- handle drag reorder (pure client) ----------------- */
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (active && over && active.id !== over.id) {
-      setData((data) => {
+      setData((prev) => {
         const oldIndex = dataIds.indexOf(active.id);
         const newIndex = dataIds.indexOf(over.id);
-        return arrayMove(data, oldIndex, newIndex);
+        return arrayMove(prev, oldIndex, newIndex);
       });
     }
   }
 
+  /* ------------------- render ------------------------------------------- */
   return (
-    <Tabs
-      defaultValue="outline"
-      className="w-full flex-col justify-start gap-6"
-    >
+    <Tabs defaultValue="table" className="w-full flex-col gap-6">
+      {/* header bar */}
       <div className="flex items-center justify-between px-4 lg:px-6">
-        <Label htmlFor="view-selector" className="sr-only">
-          View
-        </Label>
-
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              logo Neptune Overview Inbox Dashboard Users Investments Deposits
-              Withdrawals Settings
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {table
-                .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" &&
-                    column.getCanHide()
-                )
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              Columns
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            {table
+              .getAllColumns()
+              .filter((c) => c.getCanHide())
+              .map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  checked={column.getIsVisible()}
+                  onCheckedChange={(v) => column.toggleVisibility(!!v)}
+                  className="capitalize"
+                >
+                  {column.id}
+                </DropdownMenuCheckboxItem>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      <TabsContent
-        value="outline"
-        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-      >
+
+      {/* main table */}
+      <TabsContent value="table" className="flex flex-col gap-4 px-4 lg:px-6">
         <div className="overflow-hidden rounded-lg border">
           <DndContext
             collisionDetection={closestCenter}
             modifiers={[restrictToVerticalAxis]}
             onDragEnd={handleDragEnd}
             sensors={sensors}
-            id={sortableId}
           >
             <Table>
-              <TableHeader className="bg-muted sticky top-0 z-10">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      return (
-                        <TableHead key={header.id} colSpan={header.colSpan}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
+              {/* table head */}
+              <TableHeader className="sticky top-0 z-10 bg-muted">
+                {table.getHeaderGroups().map((hg) => (
+                  <TableRow key={hg.id}>
+                    {hg.headers.map((header) => (
+                      <TableHead key={header.id} colSpan={header.colSpan}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
                               header.column.columnDef.header,
                               header.getContext()
                             )}
-                        </TableHead>
-                      );
-                    })}
+                      </TableHead>
+                    ))}
                   </TableRow>
                 ))}
               </TableHeader>
-              <TableBody className="**:data-[slot=table-cell]:first:w-8">
-                {table.getRowModel().rows?.length ? (
+
+              {/* table body */}
+              <TableBody>
+                {table.getRowModel().rows.length ? (
                   <SortableContext
                     items={dataIds}
                     strategy={verticalListSortingStrategy}
@@ -364,7 +312,7 @@ export function DataTable({
                       colSpan={columns.length}
                       className="h-24 text-center"
                     >
-                      No results.
+                      {isFetching ? "Loading…" : "No results."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -372,226 +320,77 @@ export function DataTable({
             </Table>
           </DndContext>
         </div>
+
+        {/* pagination footer */}
         <div className="flex items-center justify-between px-4">
-          <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+          <div className="text-sm text-muted-foreground hidden lg:block">
+            {table.getFilteredSelectedRowModel().rows.length} of
+            {table.getFilteredRowModel().rows.length} row(s) selected
           </div>
-          <div className="flex w-full items-center gap-8 lg:w-fit">
+
+          <div className="flex items-center gap-8">
             <div className="hidden items-center gap-2 lg:flex">
-              <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Rows per page
-              </Label>
+              <Label htmlFor="rows-per-page">Rows per page</Label>
               <Select
-                value={`${table.getState().pagination.pageSize}`}
-                onValueChange={(value) => {
-                  table.setPageSize(Number(value));
-                }}
+                value={`${pageSize}`}
+                onValueChange={(v) => table.setPageSize(Number(v))}
               >
-                <SelectTrigger size="sm" className="w-20" id="rows-per-page">
-                  <SelectValue
-                    placeholder={table.getState().pagination.pageSize}
-                  />
+                <SelectTrigger id="rows-per-page" size="sm" className="w-20">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent side="top">
-                  {[10, 20, 30, 40, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>
-                      {pageSize}
+                  {[10, 25, 50].map((ps) => (
+                    <SelectItem key={ps} value={`${ps}`}>
+                      {ps}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
+
+            <div className="text-sm">
+              Page {page} of {Math.ceil(total / pageSize)}
             </div>
-            <div className="ml-auto flex items-center gap-2 lg:ml-0">
+
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
+                className="hidden h-8 w-8 lg:inline-flex"
+                onClick={() => onPageChange(1)}
+                disabled={page === 1 || isFetching}
               >
-                <span className="sr-only">Go to first page</span>
-                <IconChevronsLeft />
+                <IconChevronsLeft size={16} />
               </Button>
               <Button
                 variant="outline"
-                className="size-8"
                 size="icon"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
+                className="h-8 w-8"
+                onClick={() => onPageChange(page - 1)}
+                disabled={page === 1 || isFetching}
               >
-                <span className="sr-only">Go to previous page</span>
-                <IconChevronLeft />
+                <IconChevronLeft size={16} />
               </Button>
               <Button
                 variant="outline"
-                className="size-8"
                 size="icon"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
+                className="h-8 w-8"
+                onClick={() => onPageChange(page + 1)}
+                disabled={page * pageSize >= total || isFetching}
               >
-                <span className="sr-only">Go to next page</span>
-                <IconChevronRight />
+                <IconChevronRight size={16} />
               </Button>
               <Button
                 variant="outline"
-                className="hidden size-8 lg:flex"
-                size="icon"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
+                className="hidden h-8 w-8 lg:inline-flex"
+                onClick={() => onPageChange(Math.ceil(total / pageSize))}
+                disabled={page * pageSize >= total || isFetching}
               >
-                <span className="sr-only">Go to last page</span>
-                <IconChevronsRight />
+                <IconChevronsRight size={16} />
               </Button>
             </div>
           </div>
         </div>
       </TabsContent>
-      <TabsContent
-        value="past-performance"
-        className="flex flex-col px-4 lg:px-6"
-      >
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent value="key-personnel" className="flex flex-col px-4 lg:px-6">
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent
-        value="focus-documents"
-        className="flex flex-col px-4 lg:px-6"
-      >
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
     </Tabs>
-  );
-}
-
-const chartData = [
-  { month: "January", desktop: 186, mobile: 80 },
-  { month: "February", desktop: 305, mobile: 200 },
-  { month: "March", desktop: 237, mobile: 120 },
-  { month: "April", desktop: 73, mobile: 190 },
-  { month: "May", desktop: 209, mobile: 130 },
-  { month: "June", desktop: 214, mobile: 140 },
-];
-
-const chartConfig = {
-  desktop: {
-    label: "Desktop",
-    color: "var(--primary)",
-  },
-  mobile: {
-    label: "Mobile",
-    color: "var(--primary)",
-  },
-} satisfies ChartConfig;
-
-function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
-  const isMobile = useIsMobile();
-
-  return (
-    <Drawer direction={isMobile ? "bottom" : "right"}>
-      <DrawerTrigger asChild>
-        <Button variant="link" className="text-foreground w-fit px-0 text-left">
-          {item.FullName}
-        </Button>
-      </DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader className="gap-1">
-          <DrawerTitle>{item.FullName}</DrawerTitle>
-          <DrawerDescription>
-            Showing total visitors for the last 6 months
-          </DrawerDescription>
-        </DrawerHeader>
-        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-          {!isMobile && (
-            <>
-              <ChartContainer config={chartConfig}>
-                <AreaChart
-                  accessibilityLayer
-                  data={chartData}
-                  margin={{
-                    left: 0,
-                    right: 10,
-                  }}
-                >
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value) => value.slice(0, 3)}
-                    hide
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent indicator="dot" />}
-                  />
-                  <Area
-                    dataKey="mobile"
-                    type="natural"
-                    fill="var(--color-mobile)"
-                    fillOpacity={0.6}
-                    stroke="var(--color-mobile)"
-                    stackId="a"
-                  />
-                  <Area
-                    dataKey="desktop"
-                    type="natural"
-                    fill="var(--color-desktop)"
-                    fillOpacity={0.4}
-                    stroke="var(--color-desktop)"
-                    stackId="a"
-                  />
-                </AreaChart>
-              </ChartContainer>
-              <Separator />
-              <div className="grid gap-2">
-                <div className="flex gap-2 leading-none font-medium">
-                  Trending up by 5.2% this month{" "}
-                  <IconTrendingUp className="size-4" />
-                </div>
-                <div className="text-muted-foreground">
-                  Showing total visitors for the last 6 months. This is just
-                  some random text to test the layout. It spans multiple lines
-                  and should wrap around.
-                </div>
-              </div>
-              <Separator />
-            </>
-          )}
-          <form className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="header">Header</Label>
-              <Input id="header" defaultValue={item.FullName} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="type">Type</Label>
-              </div>
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="status">Status</Label>
-                <Select defaultValue={item.status}>
-                  <SelectTrigger id="status" className="w-full">
-                    <SelectValue placeholder="Select a status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Done">Active</SelectItem>
-                    <SelectItem value="In Progress">InActive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-
-          </form>
-        </div>
-
-      </DrawerContent>
-    </Drawer>
   );
 }
