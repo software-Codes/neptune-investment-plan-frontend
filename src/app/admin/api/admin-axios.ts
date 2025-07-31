@@ -3,14 +3,14 @@ import Cookies from "js-cookie";
 import { toast } from "sonner";
 
 
-const API_BASE_URL = 'http://localhost:4000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const ADMIN_TOKEN_KEY = 'admin-auth-token';
 
 export const adminAxios = axios.create({
     baseURL: `${API_BASE_URL}/api/v1/admin`,
     withCredentials: true,
     headers: { 'Content-Type': 'application/json' },
-    timeout: 10_000,
+    timeout: 10_000, 
 })
 
 

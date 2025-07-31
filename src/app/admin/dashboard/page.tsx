@@ -15,6 +15,17 @@ export default function Page() {
   if (error) return <p>Failed to load users.</p>;
   if (!data) return <p>Loading…</p>;
 
+  const mappedData = data.items.map((user) => ({
+    user_id: user.userId,
+    full_name: user.fullName,
+    email: user.email,
+    created_at: user.createdAt,
+    account_status: user.accountStatus,
+    account_balance: user.accountBalance,
+    trading_balance: user.tradingBalance,
+    referral_balance: user.referralBalance,
+  }));
+
   return (
     <SidebarProvider
       style={
@@ -32,7 +43,7 @@ export default function Page() {
               <SectionCards />
               <div className="px-4 lg:px-6"></div>
               <DataTable
-                data={data.items}
+                data={mappedData}
                 total={data.total}
                 page={page}
                 onPageChange={setPage}

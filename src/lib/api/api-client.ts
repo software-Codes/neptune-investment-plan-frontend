@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 "use client";
 import axios, { AxiosError } from "axios";
 import {
@@ -27,7 +24,7 @@ import { VerificationResponse } from "@/types/type";
 
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  process.env.NEXT_PUBLIC_API_URL;
 
 
 const COOKIE_OPTIONS = {

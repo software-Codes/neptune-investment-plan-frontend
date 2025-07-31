@@ -1,22 +1,21 @@
-
 import { ApiResponse } from "@/types/admin/admin.types";
 import { adminAxios } from "./admin-axios";
 
 export interface AdminUser {
-  userId: string;
-  fullName: string;
+  user_id: string;
+  full_name: string;
   email: string;
-  accountStatus: 'active' | 'suspended' | 'deactivated';
-  accountBalance: string;
-  tradingBalance: string;
-  referralBalance: string;
-  createdAt: string;
+  account_status: 'active' | 'suspended' | 'deactivated';
+  account_balance: string;
+  trading_balance: string;
+  referral_balance: string;
+  created_at: string;
 }
 
 export interface PaginatedUsers {
   items: AdminUser[];
   total: number;
-  page: number;
+  page: number; 
   size: number;
 }
 
@@ -34,8 +33,7 @@ class UsersAdminApiClient {
     return data.data;
   }
 
-  /* ---------- BLOCK / UNBLOCK ---------- */
-  async block(userId: string, reason?: string) {
+  async block(userId: string, reason = 'Admin action') {
     await adminAxios.patch(`/users/${userId}/block`, { reason });
   }
 
@@ -43,14 +41,19 @@ class UsersAdminApiClient {
     await adminAxios.patch(`/users/${userId}/unblock`);
   }
 
-  /* ---------- FORCE LOGOUT ---------- */
   async forceLogout(userId: string) {
     await adminAxios.post(`/users/${userId}/force-logout`);
   }
 
-  /* ---------- DELETE (soft/hard) ---------- */
   async remove(userId: string, soft = false) {
-    await adminAxios.delete(`/users/${userId}`, { params: { soft } });
+    await adminAxios.delete(`/users/${userId}`, { 
+      params: { soft: soft.toString() } 
+    });
+  }
+
+  async get(userId: string): Promise<AdminUser> {
+    const res = await adminAxios.get<ApiResponse<AdminUser>>(`/users/${userId}`);
+    return res.data.data;
   }
 }
 
