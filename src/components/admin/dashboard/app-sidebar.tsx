@@ -3,11 +3,9 @@ import * as React from "react"
 import { usePathname } from "next/navigation"
 import {
   IconChartBar,
-  IconDashboard,
   IconFolder,
   IconListDetails,
   IconNotification,
-  IconSettings,
   IconSettings2,
   IconUsers,
 } from "@tabler/icons-react"

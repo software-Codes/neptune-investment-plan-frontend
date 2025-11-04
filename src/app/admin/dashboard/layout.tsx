@@ -7,7 +7,7 @@ interface AdminDashboardLayoutProps {
 
 const AdminDashboardLayout = ({ children }: AdminDashboardLayoutProps) => {
     return (
-        <div className="flex">
+        <div className="flex  ">
             <SidebarProvider>
                   <AppSidebar />
             {children}

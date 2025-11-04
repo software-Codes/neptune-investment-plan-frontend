@@ -21,18 +21,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
-  IconCircleCheckFilled,
+  IconDotsCircleHorizontal,
   IconDotsVertical,
-  IconGripVertical,
-  IconLayoutColumns,
-  IconLoader,
-  IconPlus,
-  IconTrendingUp,
 } from "@tabler/icons-react";
 import {
   ColumnDef,
@@ -49,39 +43,17 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
-import { toast } from "sonner";
-import { z } from "zod";
 
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -90,7 +62,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -99,107 +70,145 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 
-export const schema = z.object({
-  id: z.number(),
-  FullName: z.string(),
-  type: z.string(),
-  status: z.string(),
-  target: z.string(),
-  limit: z.string(),
-  reviewer: z.string(),
-});
+import { AdminUser } from "@/app/admin/api/users-admin-api-client";
+import {
+  useBlockUser,
+  useUnblockUser,
+  useForceLogout,
+  useRemoveUser,
+} from "@/hooks/admin/use-admin-users";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import RowActions from "./row-actions";
 
-// Create a separate component for the drag handle
-function DragHandle({ id }: { id: number }) {
-  const { attributes, listeners } = useSortable({
-    id,
-  });
+/* ----------------------------------------------------------------------------
+   Column definitions
+   ---------------------------------------------------------------------------- */
 
+export function useUserColumns(): ColumnDef<AdminUser>[] {
+  return React.useMemo<ColumnDef<AdminUser>[]>(
+    () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={table.getIsAllRowsSelected()}
+            onCheckedChange={(v) => table.toggleAllRowsSelected(!!v)}
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(v) => row.toggleSelected(!!v)}
+            aria-label="Select row"
+          />
+        ),
+      },
+      {
+        accessorKey: "userId",
+        header: "User ID",
+        cell: ({ row }) => (
+          <span className="font-mono">
+            {row.original.user_id ? row.original.user_id.slice(0, 8) : "N/A"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Time Created",
+        cell: ({ row }) =>
+          row.original.created_at
+            ? new Date(row.original.created_at).toLocaleDateString()
+            : "N/A",
+      },
+      {
+        accessorKey: "fullName",
+        header: "Full name",
+        cell: ({ row }) => row.original.full_name || "N/A",
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ row }) => row.original.email || "N/A",
+      },
+      {
+        accessorKey: "accountStatus",
+        header: "Status",
+        cell: ({ row }) => {
+          const s = row.original.account_status;
+          const badge =
+            s === "active"
+              ? "bg-green-50 text-green-600"
+              : s === "suspended"
+              ? "bg-red-50 text-red-600"
+              : "bg-gray-50 text-gray-600";
+          return (
+            <span className={`px-2 py-1 rounded-full text-xs ${badge}`}>
+              {s || "N/A"}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "accountBalance",
+        header: "Account $",
+        cell: ({ row }) =>
+          `$${Number(row.original.account_balance || 0).toFixed(2)}`,
+      },
+      {
+        accessorKey: "tradingBalance",
+        header: "Trading $",
+        cell: ({ row }) =>
+          `$${Number(row.original.trading_balance || 0).toFixed(2)}`,
+      },
+      {
+        accessorKey: "referral_balance",
+        header: "Referral $",
+        cell: ({ row }) =>
+          `$${Number(row.original.referral_balance || 0).toFixed(2)}`,
+      },
+      {
+        accessorKey: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const user = row.original;
+          // Transform AdminUser to TransformedUser
+          const transformedUser = {
+            userId: user.user_id,
+            fullName: user.full_name,
+            email: user.email,
+            createdAt: user.created_at,
+            accountStatus: user.account_status,
+            accountBalance: user.account_balance,
+            tradingBalance: user.trading_balance,
+            referralBalance: user.referral_balance,
+          };
+          return <RowActions user={transformedUser} />;
+        },
+      },
+    ],
+    []
+  );
 }
+/* ----------------------------------------------------------------------------
+   Draggable row wrapper
+   ---------------------------------------------------------------------------- */
 
-const columns: ColumnDef<z.infer<typeof schema>>[] = [
-
-  {
-    id: "select",
-    header: ({ table }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      </div>
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "header",
-    header: "UserId",
-    cell: ({ row }) => {
-      return <TableCellViewer item={row.original} />;
-    },
-    enableHiding: false,
-  },
-  {
-    accessorKey: "type",
-    header: "Full Name",
-    cell: ({ row }) => (
-      <div className="w-32">
-        <Badge variant="outline" className="text-muted-foreground px-1.5">
-          {row.original.type}
-        </Badge>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => (
-      <Badge variant="outline" className="text-muted-foreground px-1.5">
-        {row.original.status === "Done" ? (
-          <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />
-        ) : (
-          <IconLoader />
-        )}
-        {row.original.status}
-      </Badge>
-    ),
-  },
-
-
-
-];
-
-function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
+function DraggableRow({ row }: { row: Row<AdminUser> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
-    id: row.original.id,
+    id: row.original.user_id || row.id,
   });
 
   return (
     <TableRow
-      data-state={row.getIsSelected() && "selected"}
-      data-dragging={isDragging}
       ref={setNodeRef}
+      data-dragging={isDragging}
+      data-state={row.getIsSelected() && "selected"}
       className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition: transition,
-      }}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       {row.getVisibleCells().map((cell) => (
         <TableCell key={cell.id}>
@@ -210,12 +219,32 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   );
 }
 
+/* ----------------------------------------------------------------------------
+   Props
+   ---------------------------------------------------------------------------- */
+
+interface DataTableProps {
+  data: AdminUser[];
+  page: number;
+  total: number;
+  onPageChange: (p: number) => void;
+  isFetching?: boolean;
+  pageSize?: number;
+}
+
+/* ----------------------------------------------------------------------------
+   Component
+   ---------------------------------------------------------------------------- */
+
 export function DataTable({
   data: initialData,
-}: {
-  data: z.infer<typeof schema>[];
-}) {
-  const [data, setData] = React.useState(() => initialData);
+  page,
+  total,
+  onPageChange,
+  isFetching = false,
+  pageSize = 25,
+}: DataTableProps) {
+  const [data, setData] = React.useState<AdminUser[]>(initialData);
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -223,21 +252,23 @@ export function DataTable({
     []
   );
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [pagination, setPagination] = React.useState({
-    pageIndex: 0,
-    pageSize: 10,
-  });
-  const sortableId = React.useId();
+
   const sensors = useSensors(
-    useSensor(MouseSensor, {}), 
-    useSensor(TouchSensor, {}),
-    useSensor(KeyboardSensor, {})
+    useSensor(MouseSensor),
+    useSensor(TouchSensor),
+    useSensor(KeyboardSensor)
   );
 
+  function makeRowId(row: AdminUser, index: number): string {
+    return row.user_id || `row-${index}`;
+  }
+
   const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data?.map(({ id }) => id) || [],
+    () => data.map((row, i) => makeRowId(row, i)),
     [data]
   );
+
+  const columns = useUserColumns();
 
   const table = useReactTable({
     data,
@@ -247,15 +278,15 @@ export function DataTable({
       columnVisibility,
       rowSelection,
       columnFilters,
-      pagination,
+      pagination: { pageIndex: page - 1, pageSize },
     },
-    getRowId: (row) => row.id,
+    manualPagination: true,
+    pageCount: Math.ceil(total / pageSize),
+    getRowId: (row, i) => makeRowId(row, i),
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
-    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -267,89 +298,69 @@ export function DataTable({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (active && over && active.id !== over.id) {
-      setData((data) => {
+      setData((prev) => {
         const oldIndex = dataIds.indexOf(active.id);
         const newIndex = dataIds.indexOf(over.id);
-        return arrayMove(data, oldIndex, newIndex);
+        return arrayMove(prev, oldIndex, newIndex);
       });
     }
   }
 
   return (
-    <Tabs
-      defaultValue="outline"
-      className="w-full flex-col justify-start gap-6"
-    >
+    <Tabs defaultValue="table" className="w-full flex-col gap-6">
       <div className="flex items-center justify-between px-4 lg:px-6">
-        <Label htmlFor="view-selector" className="sr-only">
-          View
-        </Label>
-
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              logo Neptune Overview Inbox Dashboard Users Investments Deposits
-              Withdrawals Settings
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {table
-                .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" &&
-                    column.getCanHide()
-                )
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              Users
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            {table
+              .getAllColumns()
+              .filter((c) => c.getCanHide())
+              .map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  checked={column.getIsVisible()}
+                  onCheckedChange={(v) => column.toggleVisibility(!!v)}
+                  className="capitalize"
+                >
+                  {column.id}
+                </DropdownMenuCheckboxItem>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      <TabsContent
-        value="outline"
-        className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-      >
+
+      <TabsContent value="table" className="flex flex-col gap-4 px-4 lg:px-6">
         <div className="overflow-hidden rounded-lg border">
           <DndContext
             collisionDetection={closestCenter}
             modifiers={[restrictToVerticalAxis]}
             onDragEnd={handleDragEnd}
             sensors={sensors}
-            id={sortableId}
           >
             <Table>
-              <TableHeader className="bg-muted sticky top-0 z-10">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      return (
-                        <TableHead key={header.id} colSpan={header.colSpan}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
+              <TableHeader className="sticky top-0 z-10 bg-muted">
+                {table.getHeaderGroups().map((hg) => (
+                  <TableRow key={hg.id}>
+                    {hg.headers.map((header) => (
+                      <TableHead key={header.id} colSpan={header.colSpan}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
                               header.column.columnDef.header,
                               header.getContext()
                             )}
-                        </TableHead>
-                      );
-                    })}
+                      </TableHead>
+                    ))}
                   </TableRow>
                 ))}
               </TableHeader>
-              <TableBody className="**:data-[slot=table-cell]:first:w-8">
-                {table.getRowModel().rows?.length ? (
+
+              <TableBody>
+                {table.getRowModel().rows.length ? (
                   <SortableContext
                     items={dataIds}
                     strategy={verticalListSortingStrategy}
@@ -364,7 +375,7 @@ export function DataTable({
                       colSpan={columns.length}
                       className="h-24 text-center"
                     >
-                      No results.
+                      {isFetching ? "Loading…" : "No results."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -372,226 +383,108 @@ export function DataTable({
             </Table>
           </DndContext>
         </div>
-        <div className="flex items-center justify-between px-4">
-          <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+
+        {Object.keys(rowSelection).length > 0 && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-muted rounded-lg">
+            <span className="text-sm text-muted-foreground">
+              {Object.keys(rowSelection).length} users selected
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const selectedUserIds = Object.keys(rowSelection);
+                if (
+                  window.confirm(
+                    `Delete ${selectedUserIds.length} selected users?`
+                  )
+                ) {
+                  console.log("Bulk delete:", selectedUserIds);
+                  // Implement bulk delete logic here
+                }
+              }}
+            >
+              Delete Selected
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRowSelection({})}
+            >
+              Clear Selection
+            </Button>
           </div>
-          <div className="flex w-full items-center gap-8 lg:w-fit">
+        )}
+
+        <div className="flex items-center justify-between px-4">
+          <div className="text-sm text-muted-foreground hidden lg:block">
+            {table.getFilteredSelectedRowModel().rows.length} of
+            {table.getFilteredRowModel().rows.length} row(s) selected
+          </div>
+
+          <div className="flex items-center gap-8">
             <div className="hidden items-center gap-2 lg:flex">
-              <Label htmlFor="rows-per-page" className="text-sm font-medium">
-                Rows per page
-              </Label>
+              <Label htmlFor="rows-per-page">Rows per page</Label>
               <Select
-                value={`${table.getState().pagination.pageSize}`}
-                onValueChange={(value) => {
-                  table.setPageSize(Number(value));
-                }}
+                value={`${pageSize}`}
+                onValueChange={(v) => table.setPageSize(Number(v))}
               >
-                <SelectTrigger size="sm" className="w-20" id="rows-per-page">
-                  <SelectValue
-                    placeholder={table.getState().pagination.pageSize}
-                  />
+                <SelectTrigger id="rows-per-page" size="sm" className="w-20">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent side="top">
-                  {[10, 20, 30, 40, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={`${pageSize}`}>
-                      {pageSize}
+                  {[10, 25, 50].map((ps) => (
+                    <SelectItem key={ps} value={`${ps}`}>
+                      {ps}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
+
+            <div className="text-sm">
+              Page {page} of {Math.ceil(total / pageSize)}
             </div>
-            <div className="ml-auto flex items-center gap-2 lg:ml-0">
+
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                className="hidden h-8 w-8 p-0 lg:flex"
-                onClick={() => table.setPageIndex(0)}
-                disabled={!table.getCanPreviousPage()}
+                className="hidden h-8 w-8 lg:inline-flex"
+                onClick={() => onPageChange(1)}
+                disabled={page === 1 || isFetching}
               >
-                <span className="sr-only">Go to first page</span>
-                <IconChevronsLeft />
+                <IconChevronsLeft size={16} />
               </Button>
               <Button
                 variant="outline"
-                className="size-8"
                 size="icon"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
+                className="h-8 w-8"
+                onClick={() => onPageChange(page - 1)}
+                disabled={page === 1 || isFetching}
               >
-                <span className="sr-only">Go to previous page</span>
-                <IconChevronLeft />
+                <IconChevronLeft size={16} />
               </Button>
               <Button
                 variant="outline"
-                className="size-8"
                 size="icon"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
+                className="h-8 w-8"
+                onClick={() => onPageChange(page + 1)}
+                disabled={page * pageSize >= total || isFetching}
               >
-                <span className="sr-only">Go to next page</span>
-                <IconChevronRight />
+                <IconChevronRight size={16} />
               </Button>
               <Button
                 variant="outline"
-                className="hidden size-8 lg:flex"
-                size="icon"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                disabled={!table.getCanNextPage()}
+                className="hidden h-8 w-8 lg:inline-flex"
+                onClick={() => onPageChange(Math.ceil(total / pageSize))}
+                disabled={page * pageSize >= total || isFetching}
               >
-                <span className="sr-only">Go to last page</span>
-                <IconChevronsRight />
+                <IconChevronsRight size={16} />
               </Button>
             </div>
           </div>
         </div>
       </TabsContent>
-      <TabsContent
-        value="past-performance"
-        className="flex flex-col px-4 lg:px-6"
-      >
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent value="key-personnel" className="flex flex-col px-4 lg:px-6">
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
-      <TabsContent
-        value="focus-documents"
-        className="flex flex-col px-4 lg:px-6"
-      >
-        <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
-      </TabsContent>
     </Tabs>
-  );
-}
-
-const chartData = [
-  { month: "January", desktop: 186, mobile: 80 },
-  { month: "February", desktop: 305, mobile: 200 },
-  { month: "March", desktop: 237, mobile: 120 },
-  { month: "April", desktop: 73, mobile: 190 },
-  { month: "May", desktop: 209, mobile: 130 },
-  { month: "June", desktop: 214, mobile: 140 },
-];
-
-const chartConfig = {
-  desktop: {
-    label: "Desktop",
-    color: "var(--primary)",
-  },
-  mobile: {
-    label: "Mobile",
-    color: "var(--primary)",
-  },
-} satisfies ChartConfig;
-
-function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
-  const isMobile = useIsMobile();
-
-  return (
-    <Drawer direction={isMobile ? "bottom" : "right"}>
-      <DrawerTrigger asChild>
-        <Button variant="link" className="text-foreground w-fit px-0 text-left">
-          {item.FullName}
-        </Button>
-      </DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader className="gap-1">
-          <DrawerTitle>{item.FullName}</DrawerTitle>
-          <DrawerDescription>
-            Showing total visitors for the last 6 months
-          </DrawerDescription>
-        </DrawerHeader>
-        <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-          {!isMobile && (
-            <>
-              <ChartContainer config={chartConfig}>
-                <AreaChart
-                  accessibilityLayer
-                  data={chartData}
-                  margin={{
-                    left: 0,
-                    right: 10,
-                  }}
-                >
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value) => value.slice(0, 3)}
-                    hide
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent indicator="dot" />}
-                  />
-                  <Area
-                    dataKey="mobile"
-                    type="natural"
-                    fill="var(--color-mobile)"
-                    fillOpacity={0.6}
-                    stroke="var(--color-mobile)"
-                    stackId="a"
-                  />
-                  <Area
-                    dataKey="desktop"
-                    type="natural"
-                    fill="var(--color-desktop)"
-                    fillOpacity={0.4}
-                    stroke="var(--color-desktop)"
-                    stackId="a"
-                  />
-                </AreaChart>
-              </ChartContainer>
-              <Separator />
-              <div className="grid gap-2">
-                <div className="flex gap-2 leading-none font-medium">
-                  Trending up by 5.2% this month{" "}
-                  <IconTrendingUp className="size-4" />
-                </div>
-                <div className="text-muted-foreground">
-                  Showing total visitors for the last 6 months. This is just
-                  some random text to test the layout. It spans multiple lines
-                  and should wrap around.
-                </div>
-              </div>
-              <Separator />
-            </>
-          )}
-          <form className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="header">Header</Label>
-              <Input id="header" defaultValue={item.FullName} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="type">Type</Label>
-              </div>
-              <div className="flex flex-col gap-3">
-                <Label htmlFor="status">Status</Label>
-                <Select defaultValue={item.status}>
-                  <SelectTrigger id="status" className="w-full">
-                    <SelectValue placeholder="Select a status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Done">Active</SelectItem>
-                    <SelectItem value="In Progress">InActive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-
-          </form>
-        </div>
-
-      </DrawerContent>
-    </Drawer>
   );
 }
